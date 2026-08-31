@@ -1,0 +1,289 @@
+/* Cavite Rentals — sliding sign in / sign up card
+   External stylesheet, loaded via <link> from resources/views/auth/card.blade.php */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+* { box-sizing: border-box; }
+
+body.auth-page {
+    font-family: 'Poppins', sans-serif;
+    background: #e0e5ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.auth-container {
+    background: #fff;
+    border-radius: 30px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    max-width: 768px;
+    min-height: 520px;
+}
+
+.auth-container p {
+    font-size: 13px;
+    line-height: 20px;
+    letter-spacing: 0.3px;
+    margin: 16px 0;
+    color: #6b7280;
+}
+
+.auth-container a.small-link {
+    color: #512da8;
+    font-size: 13px;
+    text-decoration: none;
+    margin: 10px 0;
+}
+
+.auth-container a.small-link:hover { text-decoration: underline; }
+
+.auth-container button.submit-btn {
+    border-radius: 8px;
+    border: 1px solid #512da8;
+    background: #512da8;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 13px 45px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 80ms ease-in, background 150ms ease;
+    margin-top: 12px;
+}
+
+.auth-container button.submit-btn:hover { background: #4527a0; }
+.auth-container button.submit-btn:active { transform: scale(0.97); }
+
+.auth-container button.ghost-btn {
+    background: transparent;
+    border: 1px solid #fff;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 11px 40px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 150ms ease;
+}
+
+.auth-container button.ghost-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+.auth-container form {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    height: 100%;
+    text-align: center;
+}
+
+.auth-container input,
+.auth-container select {
+    background: #eee;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin: 6px 0;
+    width: 100%;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    outline: none;
+}
+
+.auth-container .name-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.auth-container h1 {
+    font-weight: 800;
+    font-size: 26px;
+    margin: 0 0 6px;
+    color: #1e1b2e;
+}
+
+.social-icons {
+    margin: 16px 0 6px;
+    display: flex;
+    gap: 10px;
+}
+
+.social-icons a {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.field-error {
+    color: #dc2626;
+    font-size: 11px;
+    width: 100%;
+    text-align: left;
+    margin-top: -2px;
+    margin-bottom: 4px;
+}
+
+/* ── Sliding form panels ─────────────────────────────────────── */
+
+.form-container {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.sign-up-container {
+    left: 0;
+    width: 50%;
+    opacity: 0;
+    z-index: 1;
+}
+
+.sign-in-container {
+    left: 0;
+    width: 50%;
+    z-index: 2;
+}
+
+.auth-container.right-panel-active .sign-in-container { transform: translateX(100%); }
+
+.auth-container.right-panel-active .sign-up-container {
+    transform: translateX(100%);
+    opacity: 1;
+    z-index: 5;
+    animation: show 0.6s;
+}
+
+@keyframes show {
+    0%, 49.99% { opacity: 0; z-index: 1; }
+    50%, 100% { opacity: 1; z-index: 5; }
+}
+
+/* ── Overlay (purple sliding panel) ──────────────────────────── */
+
+.overlay-container {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+    z-index: 100;
+    border-top-left-radius: 150px;
+    border-bottom-left-radius: 100px;
+}
+
+.auth-container.right-panel-active .overlay-container {
+    transform: translateX(-100%);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 150px;
+    border-bottom-right-radius: 100px;
+}
+
+.overlay {
+    background: linear-gradient(135deg, #4c2889 0%, #512da8 100%);
+    color: #fff;
+    position: relative;
+    left: -100%;
+    height: 100%;
+    width: 200%;
+    transform: translateX(0);
+    transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.auth-container.right-panel-active .overlay { transform: translateX(50%); }
+
+.overlay-panel {
+    position: absolute;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    text-align: center;
+    height: 100%;
+    width: 50%;
+    transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.overlay-left { transform: translateX(-20%); }
+.auth-container.right-panel-active .overlay-left { transform: translateX(0); }
+
+.overlay-right { right: 0; transform: translateX(0); }
+.auth-container.right-panel-active .overlay-right { transform: translateX(20%); }
+
+.overlay-panel h1 { color: #fff; }
+.overlay-panel p { color: rgba(255, 255, 255, 0.85); }
+
+/* ── Mobile: stack instead of slide, sliding UX needs real width ── */
+
+@media (max-width: 680px) {
+    body.auth-page { padding: 16px; }
+
+    .auth-container {
+        min-height: 0;
+        width: 90%;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .overlay-container,
+    .form-container.sign-up-container { display: none; }
+
+    .form-container.sign-in-container {
+        position: relative;
+        width: 100%;
+        transform: none !important;
+        padding: 32px 0;
+    }
+
+    .auth-container.right-panel-active .sign-in-container { display: none; }
+
+    .auth-container.right-panel-active .form-container.sign-up-container {
+        display: flex;
+        position: relative;
+        width: 100%;
+        opacity: 1;
+        transform: none !important;
+        padding: 32px 0;
+    }
+
+    .auth-container form { padding: 0 28px; }
+
+    .auth-container input,
+    .auth-container select,
+    .auth-container button.submit-btn {
+        width: 100%;
+    }
+
+    .mobile-toggle { display: block !important; text-align: center; padding: 18px 0 0; }
+}
+
+.mobile-toggle { display: none; }
