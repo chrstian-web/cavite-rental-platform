@@ -6,10 +6,13 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Resources\UserResource;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Auth\Events\Lockout;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -55,11 +58,26 @@ class AuthController extends ApiController
             'device_name' => ['nullable', 'string', 'max:100'],
         ]);
 
+        $throttleKey = Str::transliterate(Str::lower($validated['email']).'|'.$request->ip());
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            event(new Lockout($request));
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            throw ValidationException::withMessages([
+                'email' => ["Too many login attempts. Please try again in {$seconds} seconds."],
+            ]);
+        }
+
         $user = User::where('email', $validated['email'])->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            RateLimiter::hit($throttleKey);
+
             throw ValidationException::withMessages(['email' => ['Invalid credentials.']]);
         }
+
+        RateLimiter::clear($throttleKey);
 
         $token = $user->createToken($validated['device_name'] ?? 'mobile')->plainTextToken;
 
@@ -74,6 +92,18 @@ class AuthController extends ApiController
         $request->user()->currentAccessToken()->delete();
 
         return $this->success(null, 'Logged out successfully.');
+    }
+
+    /**
+     * Revoke every token for this user — e.g. "log out all devices" after a
+     * lost/stolen phone, now that tokens carry a long (but non-infinite)
+     * expiration rather than lasting forever.
+     */
+    public function logoutAll(Request $request): JsonResponse
+    {
+        $request->user()->tokens()->delete();
+
+        return $this->success(null, 'Logged out of all devices.');
     }
 
     public function profile(Request $request): JsonResponse

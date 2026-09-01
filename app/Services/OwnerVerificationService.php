@@ -30,10 +30,11 @@ class OwnerVerificationService
 
     /**
      * @param  array<string, UploadedFile>  $documents  keyed by document_type
+     * @param  array<string, string>  $expirationDates  keyed by document_type, optional
      */
-    public function submit(User $owner, array $documents): OwnerVerification
+    public function submit(User $owner, array $documents, array $expirationDates = []): OwnerVerification
     {
-        return DB::transaction(function () use ($owner, $documents) {
+        return DB::transaction(function () use ($owner, $documents, $expirationDates) {
             $verification = OwnerVerification::create([
                 'user_id' => $owner->id,
                 'status' => 'needs_review', // see runAutomatedChecks() for why this is always the outcome
@@ -51,6 +52,7 @@ class OwnerVerificationService
                     'mime_type' => $file->getClientMimeType(),
                     'size_bytes' => $file->getSize(),
                     'status' => 'pending',
+                    'expiration_date' => $expirationDates[$type] ?? null,
                 ]);
             }
 

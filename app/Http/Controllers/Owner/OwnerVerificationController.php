@@ -34,8 +34,9 @@ class OwnerVerificationController extends Controller
     public function store(StoreOwnerVerificationRequest $request): RedirectResponse
     {
         $documents = $request->file('documents', []);
+        $expirationDates = $request->input('expiration_dates', []);
 
-        $this->verifications->submit($request->user(), $documents);
+        $this->verifications->submit($request->user(), $documents, $expirationDates);
 
         return redirect()
             ->route('owner.verification.show')

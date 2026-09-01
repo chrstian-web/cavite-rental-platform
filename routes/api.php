@@ -21,8 +21,13 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
 
     // ── Public ───────────────────────────────────────────────────
-    Route::post('auth/register', [AuthController::class, 'register']);
-    Route::post('auth/login', [AuthController::class, 'login']);
+    // Throttled by IP to stop brute-force login attempts and mass fake
+    // registrations against the mobile API (the web login already had
+    // per-email+IP throttling via LoginRequest; this brings the API in line).
+    Route::post('auth/register', [AuthController::class, 'register'])
+        ->middleware('throttle:5,1');
+    Route::post('auth/login', [AuthController::class, 'login'])
+        ->middleware('throttle:5,1');
 
     Route::get('properties', [PropertyController::class, 'index']);
     Route::get('properties/{slug}', [PropertyController::class, 'show']);
@@ -30,6 +35,7 @@ Route::prefix('v1')->group(function () {
     // ── Authenticated (Sanctum token) ───────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
+        Route::post('auth/logout-all', [AuthController::class, 'logoutAll']);
         Route::get('auth/profile', [AuthController::class, 'profile']);
         Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
 

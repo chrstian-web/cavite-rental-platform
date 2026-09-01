@@ -41,7 +41,15 @@ class UserFactory extends Factory
 
     public function owner(): static
     {
-        return $this->withRole('owner', 'Property Owner');
+        return $this->withRole('owner', 'Property Owner')->state(fn () => [
+            // Owner-only routes are gated behind the `owner.verified` middleware.
+            // Default factory-created owners to 'verified' so feature tests that
+            // don't care about the verification flow itself aren't silently
+            // redirected away before reaching the controller under test.
+            // Tests that specifically exercise verification (OwnerVerificationTest)
+            // already override this with an explicit ->create(['owner_verification_status' => ...]).
+            'owner_verification_status' => 'verified',
+        ]);
     }
 
     public function manager(): static

@@ -17,7 +17,10 @@
                 'cssClass' => $h->target_scene_id ? 'tour-hotspot-arrow' : 'tour-hotspot-info',
             ])->toArray(),
         ],
-    ])->toJson();
+    // JSON_HEX_* flags escape <, >, &, ', " into \u-sequences so owner-supplied
+    // scene titles / hotspot labels can never break out of this <script> tag
+    // (e.g. a label of `</script><script>alert(1)</script>`).
+    ])->toJson(JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
     $firstSceneId = 'scene-'.$tour->scenes->first()->id;
 @endphp
 
