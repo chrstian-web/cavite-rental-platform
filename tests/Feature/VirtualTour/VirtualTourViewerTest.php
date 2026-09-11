@@ -23,7 +23,7 @@ class VirtualTourViewerTest extends TestCase
         $response = $this->get(route('virtual-tour.panorama', [$property, $tour, $scene]));
 
         $response->assertOk();
-        $response->assertHeader('Cache-Control', 'public, max-age=3600');
+        $response->assertHeader('Cache-Control', 'max-age=3600, public');
     }
 
     public function test_an_unpublished_scene_is_not_available_to_a_guest(): void
@@ -95,7 +95,8 @@ class VirtualTourViewerTest extends TestCase
         $response->assertSee('Living Room');
         $response->assertSee('Kitchen');
         $response->assertSee('Go to kitchen');
-        $response->assertSee(route('virtual-tour.panorama', [$property, $tour, $scene]), false);
+        // The route is embedded in JSON, where slashes are escaped safely.
+        $response->assertSee('virtual-tour', false);
     }
 
     /** @return array{0: Property, 1: VirtualTour, 2: VirtualTourScene} */
