@@ -6,8 +6,12 @@ use App\Http\Concerns\FiltersAndSortsProperties;
 use App\Http\Controllers\Controller;
 use App\Models\Property;
 use App\Models\SearchLog;
+use App\Models\VirtualTour;
+use App\Models\VirtualTourScene;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PropertyController extends Controller
 {
@@ -76,5 +80,35 @@ class PropertyController extends Controller
         $property->increment('views_count');
 
         return view('properties.show', compact('property'));
+    }
+
+    /**
+     * Serve a tour panorama without exposing the public storage path.
+     * Published scenes are available to listing visitors; draft scenes are
+     * available only to users who can update the property (owner preview).
+     */
+    public function panorama(Property $property, VirtualTour $tour, VirtualTourScene $scene): BinaryFileResponse
+    {
+        abort_unless(
+            $tour->property_id === $property->id
+            && $scene->virtual_tour_id === $tour->id,
+            404
+        );
+
+        if ($tour->status !== 'published') {
+            abort_unless(
+                auth()->check() && auth()->user()->can('update', $property),
+                404
+            );
+        }
+
+        $disk = Storage::disk('public');
+        abort_unless($disk->exists($scene->panorama_image), 404);
+
+        return response()->file($disk->path($scene->panorama_image), [
+            'Cache-Control' => $tour->status === 'published'
+                ? 'public, max-age=3600'
+                : 'private, no-store',
+        ]);
     }
 }

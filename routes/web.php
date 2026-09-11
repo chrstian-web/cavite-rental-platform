@@ -43,6 +43,8 @@ Route::get('/', function () {
 
 Route::get('/properties', [PublicPropertyController::class, 'index'])->name('properties.index');
 Route::get('/properties/{slug}', [PublicPropertyController::class, 'show'])->name('properties.show');
+Route::get('/properties/{property}/virtual-tour/{tour}/scenes/{scene}/panorama', [PublicPropertyController::class, 'panorama'])
+    ->name('virtual-tour.panorama');
 
 // ── Authenticated ────────────────────────────────────────────────
 
