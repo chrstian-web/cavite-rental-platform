@@ -94,6 +94,8 @@
         </div>
     </nav>
 
+    @include('partials.desktop-back-button', ['fallbackUrl' => route('dashboard')])
+
     <main class="max-w-6xl mx-auto px-4 py-8">
         @yield('content')
     </main>

@@ -146,6 +146,8 @@
         </div>
     </nav>
 
+    @include('partials.desktop-back-button', ['fallbackUrl' => route('home')])
+
     <!-- Main Body Area -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10 flex-1 w-full">
         @yield('content')
