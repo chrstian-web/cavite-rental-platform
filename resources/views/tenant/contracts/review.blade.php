@@ -3,7 +3,7 @@
 @section('title', 'Leave a Review')
 
 @section('content')
-    <a href="{{ route('tenant.contracts.show', $contract) }}" class="text-sm text-blue-600 hover:underline">&larr; Contract</a>
+    <a href="{{ route('tenant.contracts.show', $contract) }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>Contract</span></a>
 
     <h1 class="text-xl font-semibold text-slate-900 mt-4 mb-6">Review {{ $contract->property->name }}</h1>
 

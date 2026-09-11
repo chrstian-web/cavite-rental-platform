@@ -135,10 +135,13 @@ class OwnerVerificationService
 
         $verification->documents()->update(['status' => 'verified', 'verified_at' => now()]);
 
-        // Approval is the trigger for OTP verification (Step 20). Until that
-        // ships, the owner sits at 'approved' — still gated from owner
-        // features, since only 'verified' passes User::isOwnerVerified().
-        $verification->user->update(['owner_verification_status' => 'approved']);
+        // NOTE: this used to set 'approved' as an intermediate state, expecting
+        // a follow-up OTP/email verification step (Step 20) to promote it to
+        // 'verified'. That step was never built, so every approved owner was
+        // permanently stuck — locked out of owner features with no path
+        // forward. Until Step 20 actually ships, approval goes straight to
+        // 'verified' so owners aren't blocked by an unfinished feature.
+        $verification->user->update(['owner_verification_status' => 'verified']);
         $verification->user->notify(new OwnerVerificationResultNotification($verification));
 
         return $verification->fresh();

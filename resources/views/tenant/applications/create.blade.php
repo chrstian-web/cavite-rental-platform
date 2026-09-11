@@ -3,7 +3,7 @@
 @section('title', 'Apply — '.$property->name)
 
 @section('content')
-    <a href="{{ route('properties.show', $property->slug) }}" class="text-sm text-blue-600 hover:underline">&larr; {{ $property->name }}</a>
+    <a href="{{ route('properties.show', $property->slug) }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>{{ $property->name }}</span></a>
 
     <h1 class="text-xl font-semibold text-slate-900 mt-4 mb-2">Apply for {{ $space->space_number }}</h1>
     <p class="text-sm text-slate-500 mb-6">{{ $property->name }} &middot; ₱{{ number_format($space->monthly_rent) }}/month</p>

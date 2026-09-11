@@ -44,6 +44,7 @@
                             ['route' => 'admin.owner-verifications.index', 'label' => 'Owner Verifications', 'notifyTypes' => 'new_owner_verification_submitted'],
                             ['route' => 'admin.dss.index', 'label' => 'DSS Configuration'],
                             ['route' => 'admin.reports.index', 'label' => 'Reports'],
+                            ['route' => 'admin.users.index', 'label' => 'Manage Users'],
                         ]])
                     @endif
                 </div>
@@ -87,6 +88,7 @@
                 <a href="{{ route('admin.owner-verifications.index') }}" class="block text-sm text-slate-600 py-1">Owner Verifications</a>
                 <a href="{{ route('admin.dss.index') }}" class="block text-sm text-slate-600 py-1">DSS Configuration</a>
                 <a href="{{ route('admin.reports.index') }}" class="block text-sm text-slate-600 py-1">Reports</a>
+                <a href="{{ route('admin.users.index') }}" class="block text-sm text-slate-600 py-1">Manage Users</a>
             @endif
             <a href="{{ route('properties.index') }}" class="block text-sm text-blue-600 py-1">Browse All Properties</a>
         </div>

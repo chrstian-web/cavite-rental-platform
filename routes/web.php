@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DssController;
 use App\Http\Controllers\Admin\OwnerVerificationController as AdminOwnerVerificationController;
 use App\Http\Controllers\Admin\PropertyController as AdminPropertyController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
@@ -173,6 +174,10 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/{type}', [ReportController::class, 'show'])->name('reports.show');
         Route::get('reports/{type}/export/csv', [ReportController::class, 'exportCsv'])->name('reports.export.csv');
         Route::get('reports/{type}/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
+
+        Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}/password/edit', [AdminUserController::class, 'editPassword'])->name('users.password.edit');
+        Route::patch('users/{user}/password', [AdminUserController::class, 'updatePassword'])->name('users.password.update');
     });
 });
 

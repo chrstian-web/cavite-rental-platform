@@ -4,32 +4,32 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Cavite Rental Platform')</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>[x-cloak] { display: none !important; }</style>
     @stack('head')
 </head>
-<body class="min-h-screen bg-slate-50 flex flex-col">
+<body class="min-h-screen bg-slate-50 flex flex-col" data-role="tenant">
 
     <!-- Top Navigation Bar -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
 
             <!-- Logo & Left Links -->
             <div class="flex items-center gap-6">
-                <a href="{{ route('home') }}" class="font-bold text-lg text-slate-900 flex items-center gap-1">
+                <a href="{{ route('home') }}" class="font-extrabold tracking-tight text-lg text-slate-900 flex items-center gap-1">
                     Cavite<span class="text-blue-600">Rentals</span>
                 </a>
 
                 <!-- Role-Based Main Navigation -->
-                <div class="hidden md:flex items-center gap-4 text-sm font-medium text-slate-600">
+                <div class="hidden lg:flex items-center gap-5 text-sm font-semibold text-slate-600">
                     <a href="{{ route('home') }}" class="hover:text-blue-600 transition">Home</a>
                     <a href="{{ route('properties.index') }}" class="hover:text-blue-600 transition">Properties</a>
 
                     @auth
                         @if (auth()->user()->isTenant())
-                            <a href="{{ route('tenant.recommendations.index') }}" class="hover:text-blue-600 transition">Recommendations</a>
+                            <a href="{{ route('tenant.recommendations.create') }}" class="hover:text-blue-600 transition">Recommendations</a>
                         @elseif (auth()->user()->isOwner())
                             <a href="{{ route('owner.properties.index') }}" class="hover:text-blue-600 transition">My Properties</a>
                             <a href="{{ route('owner.applications.index') }}" class="hover:text-blue-600 transition">Applications</a>
@@ -147,7 +147,7 @@
     </nav>
 
     <!-- Main Body Area -->
-    <main class="max-w-6xl mx-auto px-4 py-8 flex-1 w-full">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10 flex-1 w-full">
         @yield('content')
     </main>
 

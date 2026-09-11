@@ -10,7 +10,7 @@
     $showRemoveFavorite = $showRemoveFavorite ?? false;
 @endphp
 
-<article class="group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 relative">
+<article class="group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-0.5 hover:border-slate-300 transition-all duration-200 relative">
     @if ($showCompare)
         <label class="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur-sm rounded-lg px-2.5 py-1.5 shadow-sm border border-slate-200 cursor-pointer min-h-[44px]">
             <input type="checkbox" class="compare-checkbox w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" value="{{ $property->id }}">
@@ -23,7 +23,7 @@
             @if ($property->images->first())
                 <img src="{{ asset('storage/'.$property->images->first()->path) }}"
                      alt="{{ $property->name }}"
-                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
             @else
                 <div class="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-2">
                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -33,13 +33,14 @@
                     <span class="text-sm">No photo yet</span>
                 </div>
             @endif
-            <span class="absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide bg-white/95 backdrop-blur-sm text-blue-700 border border-blue-100">
+            <span class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/45 to-transparent pointer-events-none"></span>
+            <span class="absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-white/95 backdrop-blur-sm text-rose-700 border border-rose-100">
                 {{ str($property->property_type)->replace('_', ' ')->title() }}
             </span>
         </div>
 
         <div class="p-4 sm:p-5">
-            <h3 class="font-semibold text-slate-900 text-base leading-snug group-hover:text-blue-600 transition-colors">{{ $property->name }}</h3>
+            <h3 class="font-bold text-slate-900 text-base leading-snug group-hover:text-rose-600 transition-colors">{{ $property->name }}</h3>
             <p class="text-sm text-slate-500 mt-1 flex items-center gap-1">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -49,7 +50,7 @@
             </p>
 
             <div class="mt-3 flex items-end justify-between gap-2">
-                <p class="text-base font-bold text-slate-900">
+                <p class="text-base font-extrabold text-slate-900">
                     @if ($property->min_monthly_rent)
                         ₱{{ number_format($property->min_monthly_rent) }}
                         @if ($property->max_monthly_rent && $property->max_monthly_rent != $property->min_monthly_rent)

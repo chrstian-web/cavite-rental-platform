@@ -5,6 +5,8 @@
 @section('content')
     <h1 class="text-xl font-semibold text-slate-900 mb-6">Add a new property</h1>
 
+    @include('partials.validation-errors')
+
     <form method="POST" action="{{ route('owner.properties.store') }}" enctype="multipart/form-data"
           class="bg-white border border-slate-200 rounded-xl p-6">
         @csrf

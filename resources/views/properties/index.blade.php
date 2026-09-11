@@ -3,9 +3,10 @@
 @section('title', 'Browse Properties')
 
 @section('content')
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-900 mb-1">Find Your Ideal Rental Home in Cavite</h1>
-        <p class="text-slate-500">Condominiums, boarding houses, and dormitories across Cavite province.</p>
+    <div class="mb-8 rounded-3xl bg-gradient-to-br from-rose-50 via-white to-orange-50 border border-rose-100 px-6 py-8 sm:px-10">
+        <p class="eyebrow text-rose-600 mb-2">Your next chapter starts here</p>
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 text-balance">Find your ideal rental home in Cavite</h1>
+        <p class="text-slate-600 mt-3 max-w-2xl">Browse verified condominiums, boarding houses, and dormitories across the province — then compare your favorites with confidence.</p>
     </div>
 
     <!-- Layout Container -->
@@ -13,10 +14,10 @@
 
         <!-- Sidebar Filter (Desktop & Mobile Responsive) -->
         <aside class="lg:col-span-1 mb-6 lg:mb-0">
-            <div class="bg-white border border-slate-200 rounded-xl p-5 sticky top-6 shadow-sm">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 sticky top-24 shadow-sm">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="font-semibold text-slate-900">Filter Properties</h2>
-                    <a href="{{ url()->current() }}" class="text-xs text-blue-600 hover:underline font-medium">Reset All</a>
+                    <h2 class="font-bold text-slate-900">Refine your search</h2>
+                    <a href="{{ url()->current() }}" class="text-xs text-rose-600 hover:underline font-semibold">Reset all</a>
                 </div>
 
                 <form method="GET" action="{{ url()->current() }}" class="space-y-4">
@@ -68,7 +69,7 @@
                     </div>
 
                     <!-- Action Button -->
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg py-2.5 transition">
+                    <button type="submit" class="w-full btn-primary btn-tenant">
                         Apply Filters
                     </button>
                 </form>
@@ -89,9 +90,9 @@
                 <!-- Tenant Property Comparison Action Bar -->
                 @auth
                     @if (auth()->user()->isTenant())
-                        <form id="compareForm" method="GET" action="{{ route('tenant.compare.show') }}" class="mb-4 bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-between">
+                            <form id="compareForm" method="GET" action="{{ route('tenant.compare.show') }}" class="mb-5 bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between shadow-sm">
                             <input type="hidden" name="ids" id="compareIds">
-                            <span class="text-xs text-slate-600 font-medium">Select up to 4 properties to compare:</span>
+                                <span class="text-sm text-slate-600 font-semibold">Select up to 4 properties to compare</span>
                             <button type="submit" id="compareBtn" disabled
                                 class="text-xs bg-slate-200 text-slate-400 rounded-full px-4 py-1.5 cursor-not-allowed font-medium transition">
                                 Compare Selected (0)
@@ -101,9 +102,14 @@
                 @endauth
 
                 <!-- Grid Listing -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="flex items-center justify-between mb-4">
+                    <p class="text-sm text-slate-500"><span class="font-bold text-slate-900">{{ $properties->total() }}</span> homes available</p>
+                    <span class="hidden sm:inline text-xs text-slate-400">Updated listings from across Cavite</span>
+                </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     @foreach ($properties as $property)
-                        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition relative flex flex-col justify-between">
+                        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 relative flex flex-col justify-between">
                             <!-- Comparison Checkbox -->
                             @auth
                                 @if (auth()->user()->isTenant())
@@ -115,10 +121,10 @@
 
                             <a href="{{ route('properties.show', $property->slug) }}" class="block flex-1">
                                 <!-- Property Image -->
-                                <div class="aspect-video bg-slate-100 flex items-center justify-center text-slate-400 text-sm relative overflow-hidden">
+                                <div class="aspect-[4/3] bg-slate-100 flex items-center justify-center text-slate-400 text-sm relative overflow-hidden">
                                     @if ($property->images->first())
                                         <img src="{{ asset('storage/'.$property->images->first()->path) }}"
-                                             alt="{{ $property->name }}" class="w-full h-full object-cover">
+                                             alt="{{ $property->name }}" class="w-full h-full object-cover transition-transform duration-500 hover:scale-105">
                                     @else
                                         <span class="text-xs text-slate-400">No photo available</span>
                                     @endif
@@ -126,14 +132,14 @@
 
                                 <!-- Property Details -->
                                 <div class="p-4">
-                                    <span class="text-[10px] uppercase tracking-wider text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">
+                                    <span class="text-[10px] uppercase tracking-wider text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-full">
                                         {{ str($property->property_type)->replace('_', ' ')->title() }}
                                     </span>
 
                                     <h3 class="font-semibold text-slate-900 mt-2 truncate text-base">{{ $property->name }}</h3>
                                     <p class="text-xs text-slate-500 mt-0.5">📍 {{ $property->location->city_municipality }}, Cavite</p>
 
-                                    <p class="text-sm font-bold text-slate-900 mt-3">
+                                    <p class="text-sm font-extrabold text-slate-900 mt-3">
                                         @if ($property->min_monthly_rent)
                                             ₱{{ number_format($property->min_monthly_rent) }}
                                             @if ($property->max_monthly_rent && $property->max_monthly_rent != $property->min_monthly_rent)
@@ -150,7 +156,7 @@
                             <!-- Card Footer -->
                             <div class="px-4 pb-4 pt-0 border-t border-slate-50 mt-auto flex items-center justify-between text-xs text-slate-400">
                                 <span>{{ $property->rental_spaces_count }} unit(s) listed</span>
-                                <a href="{{ route('properties.show', $property->slug) }}" class="text-blue-600 hover:underline font-medium">View Details →</a>
+                                <a href="{{ route('properties.show', $property->slug) }}" class="text-rose-600 hover:underline font-bold">View details →</a>
                             </div>
                         </div>
                     @endforeach

@@ -1,0 +1,1521 @@
+diff --git a/app/Http/Controllers/Owner/PaymentController.php b/app/Http/Controllers/Owner/PaymentController.php
+index 2f9d590..844050c 100644
+--- a/app/Http/Controllers/Owner/PaymentController.php
++++ b/app/Http/Controllers/Owner/PaymentController.php
+@@ -3,12 +3,97 @@
+ namespace App\Http\Controllers\Owner;
+ 
+ use App\Http\Controllers\Controller;
++use App\Http\Requests\Payment\ReviewPaymentRequest;
+ use App\Http\Requests\Payment\StorePaymentRequest;
++use App\Models\Payment;
+ use App\Models\RentalContract;
++use App\Services\PaymentService;
++use Barryvdh\DomPDF\Facade\Pdf;
+ use Illuminate\Http\RedirectResponse;
++use Illuminate\Http\Request;
++use Illuminate\View\View;
+ 
+ class PaymentController extends Controller
+ {
++    public function __construct(protected PaymentService $payments)
++    {
++    }
++
++    /**
++     * Review queue across every contract this owner/manager is responsible
++     * for. Defaults to what actually needs attention (submitted), but can be
++     * filtered to see the full payment history too.
++     */
++    public function index(Request $request): View
++    {
++        $user = $request->user();
++        $status = $request->string('status')->value() ?: 'submitted';
++
++        $payments = Payment::query()
++            ->with(['contract.property', 'tenant'])
++            ->whereHas('contract', function ($q) use ($user) {
++                $q->when($user->isOwner(), fn ($q2) => $q2->where('owner_id', $user->id))
++                  ->when($user->isManager(), fn ($q2) => $q2->whereHas('property.managers', fn ($q3) => $q3->where('users.id', $user->id)));
++            })
++            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
++            ->orderByDesc('submitted_at')
++            ->orderBy('due_date')
++            ->paginate(15)
++            ->withQueryString();
++
++        $pendingReviewCount = Payment::query()
++            ->whereHas('contract', function ($q) use ($user) {
++                $q->when($user->isOwner(), fn ($q2) => $q2->where('owner_id', $user->id))
++                  ->when($user->isManager(), fn ($q2) => $q2->whereHas('property.managers', fn ($q3) => $q3->where('users.id', $user->id)));
++            })
++            ->where('status', 'submitted')
++            ->count();
++
++        return view('owner.payments.index', compact('payments', 'status', 'pendingReviewCount'));
++    }
++
++    public function show(Payment $payment): View
++    {
++        $this->authorize('view', $payment);
++
++        $payment->load(['contract.property', 'tenant', 'reviewer', 'statusHistories.actor']);
++
++        return view('owner.payments.show', compact('payment'));
++    }
++
++    public function review(ReviewPaymentRequest $request, Payment $payment): RedirectResponse
++    {
++        $reviewer = $request->user();
++        $reason = $request->input('reason');
++
++        match ($request->string('action')->value()) {
++            'approve' => $this->payments->approve($payment, $reviewer),
++            'reject' => $this->payments->reject($payment, $reviewer, $reason),
++            'request_correction' => $this->payments->requestCorrection($payment, $reviewer, $reason),
++        };
++
++        return redirect()
++            ->route('owner.payments.index')
++            ->with('status', 'Payment reviewed.');
++    }
++
++    public function receipt(Payment $payment)
++    {
++        $this->authorize('view', $payment);
++
++        abort_unless($payment->status === 'paid', 404, 'A receipt is only available for an approved payment.');
++
++        $payment->load(['contract.property', 'contract.tenant', 'reviewer']);
++
++        $pdf = Pdf::loadView('pdf.payment-receipt', ['payment' => $payment]);
++
++        return $pdf->download("receipt-payment-{$payment->id}.pdf");
++    }
++
++    /**
++     * Existing manual recording flow (owner enters a fully-formed payment
++     * record directly, e.g. for cash collected in person). Unchanged.
++     */
+     public function store(StorePaymentRequest $request, RentalContract $contract): RedirectResponse
+     {
+         $data = $request->validated();
+diff --git a/app/Http/Controllers/PaymentDocumentController.php b/app/Http/Controllers/PaymentDocumentController.php
+new file mode 100644
+index 0000000..2917d2d
+--- /dev/null
++++ b/app/Http/Controllers/PaymentDocumentController.php
+@@ -0,0 +1,25 @@
++<?php
++
++namespace App\Http\Controllers;
++
++use App\Models\Payment;
++use Illuminate\Support\Facades\Storage;
++use Symfony\Component\HttpFoundation\Response;
++
++class PaymentDocumentController extends Controller
++{
++    /**
++     * Private proof-of-payment download — the tenant who submitted it, the
++     * property owner/manager, or a Super Admin only. Never a public URL,
++     * matching VerificationDocumentController / ApplicationDocumentController.
++     */
++    public function download(Payment $payment): Response
++    {
++        $this->authorize('view', $payment);
++
++        abort_unless($payment->proof_path, 404);
++        abort_unless(Storage::disk('local')->exists($payment->proof_path), 404);
++
++        return Storage::disk('local')->download($payment->proof_path, $payment->proof_original_filename);
++    }
++}
+diff --git a/app/Http/Controllers/Tenant/PaymentController.php b/app/Http/Controllers/Tenant/PaymentController.php
+index 06bf625..32c9708 100644
+--- a/app/Http/Controllers/Tenant/PaymentController.php
++++ b/app/Http/Controllers/Tenant/PaymentController.php
+@@ -3,20 +3,76 @@
+ namespace App\Http\Controllers\Tenant;
+ 
+ use App\Http\Controllers\Controller;
++use App\Http\Requests\Payment\SubmitPaymentRequest;
+ use App\Models\Payment;
++use App\Services\PaymentService;
++use Barryvdh\DomPDF\Facade\Pdf;
++use Illuminate\Http\RedirectResponse;
+ use Illuminate\Http\Request;
+ use Illuminate\View\View;
+ 
+ class PaymentController extends Controller
+ {
++    public function __construct(protected PaymentService $payments)
++    {
++    }
++
++    /**
++     * Grouped into the buckets requested in the build prompt: Due Soon,
++     * Pending Review, Paid, Overdue, Failed. "Overdue" is computed from the
++     * due date rather than relying solely on the stored status, so a payment
++     * an owner never manually flagged still surfaces once it's late.
++     */
+     public function index(Request $request): View
+     {
+-        $payments = Payment::query()
++        $all = Payment::query()
+             ->with(['contract.property'])
+             ->where('user_id', $request->user()->id)
+-            ->latest('due_date')
+-            ->paginate(15);
++            ->orderBy('due_date')
++            ->get();
++
++        $overdue = $all->filter(fn (Payment $p) => $p->isPastDue());
++        $dueSoon = $all->filter(fn (Payment $p) => $p->status === 'pending' && ! $p->isPastDue());
++        $pendingReview = $all->where('status', 'submitted');
++        $paid = $all->where('status', 'paid')->sortByDesc('payment_date');
++        $failed = $all->where('status', 'failed');
++
++        return view('tenant.payments.index', compact('dueSoon', 'pendingReview', 'paid', 'overdue', 'failed'));
++    }
++
++    public function show(Payment $payment): View
++    {
++        $this->authorize('view', $payment);
++
++        $payment->load(['contract.property', 'reviewer', 'statusHistories.actor']);
++
++        return view('tenant.payments.show', compact('payment'));
++    }
++
++    public function store(SubmitPaymentRequest $request, Payment $payment): RedirectResponse
++    {
++        $this->payments->submit(
++            $payment,
++            $request->user(),
++            $request->validated(),
++            $request->file('proof')
++        );
++
++        return redirect()
++            ->route('tenant.payments.show', $payment)
++            ->with('status', 'Payment submitted for review.');
++    }
++
++    public function receipt(Payment $payment)
++    {
++        $this->authorize('view', $payment);
++
++        abort_unless($payment->status === 'paid', 404, 'A receipt is only available for an approved payment.');
++
++        $payment->load(['contract.property', 'contract.tenant', 'reviewer']);
++
++        $pdf = Pdf::loadView('pdf.payment-receipt', ['payment' => $payment]);
+ 
+-        return view('tenant.payments.index', compact('payments'));
++        return $pdf->download("receipt-payment-{$payment->id}.pdf");
+     }
+ }
+diff --git a/app/Http/Requests/Payment/ReviewPaymentRequest.php b/app/Http/Requests/Payment/ReviewPaymentRequest.php
+new file mode 100644
+index 0000000..2aacb56
+--- /dev/null
++++ b/app/Http/Requests/Payment/ReviewPaymentRequest.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace App\Http\Requests\Payment;
++
++use Illuminate\Foundation\Http\FormRequest;
++
++class ReviewPaymentRequest extends FormRequest
++{
++    public function authorize(): bool
++    {
++        return $this->user()->can('review', $this->route('payment'));
++    }
++
++    public function rules(): array
++    {
++        return [
++            'action' => ['required', 'in:approve,reject,request_correction'],
++            'reason' => ['required_if:action,reject,request_correction', 'nullable', 'string', 'max:1000'],
++        ];
++    }
++}
+diff --git a/app/Http/Requests/Payment/SubmitPaymentRequest.php b/app/Http/Requests/Payment/SubmitPaymentRequest.php
+new file mode 100644
+index 0000000..e85c4ed
+--- /dev/null
++++ b/app/Http/Requests/Payment/SubmitPaymentRequest.php
+@@ -0,0 +1,48 @@
++<?php
++
++namespace App\Http\Requests\Payment;
++
++use Illuminate\Foundation\Http\FormRequest;
++use Illuminate\Validation\Validator;
++
++class SubmitPaymentRequest extends FormRequest
++{
++    public function authorize(): bool
++    {
++        return $this->user()->can('submit', $this->route('payment'));
++    }
++
++    public function rules(): array
++    {
++        return [
++            'amount' => ['required', 'numeric', 'min:0.01'],
++            'payment_method' => ['required', 'in:cash,gcash,bank_transfer,other'],
++            'payment_date' => ['required', 'date', 'before_or_equal:today'],
++            'reference_number' => ['required', 'string', 'max:100'],
++            'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
++        ];
++    }
++
++    /**
++     * The record's due amount is the source of truth. The tenant's `amount`
++     * field is display-only in the UI, but we still validate it server-side
++     * against tampering, and reject anything that doesn't match exactly —
++     * this schema has no concept of a partial payment, so a mismatch (over
++     * or under) is always a mistake, not a valid submission.
++     */
++    public function withValidator(Validator $validator): void
++    {
++        $validator->after(function (Validator $validator) {
++            $payment = $this->route('payment');
++            $submitted = (float) $this->input('amount');
++            $due = (float) $payment->amount;
++
++            if (abs($submitted - $due) > 0.001) {
++                $validator->errors()->add(
++                    'amount',
++                    "The amount must match the due balance of ₱".number_format($due, 2).'.'
++                );
++            }
++        });
++    }
++}
+diff --git a/app/Models/Payment.php b/app/Models/Payment.php
+index a3a2fdc..f5cdc36 100644
+--- a/app/Models/Payment.php
++++ b/app/Models/Payment.php
+@@ -4,12 +4,24 @@
+ 
+ use Illuminate\Database\Eloquent\Model;
+ use Illuminate\Database\Eloquent\Relations\BelongsTo;
++use Illuminate\Database\Eloquent\Relations\HasMany;
+ 
+ class Payment extends Model
+ {
++    /**
++     * pending    — due, tenant hasn't submitted anything yet (or was asked to correct/resubmit)
++     * submitted  — tenant submitted method/reference/proof, awaiting owner or admin review
++     * paid       — reviewer approved the submission (or owner recorded it directly)
++     * overdue    — manually flagged overdue by an owner (see isPastDue() for the computed version)
++     * failed     — reviewer rejected the submission
++     */
++    public const STATUSES = ['pending', 'submitted', 'paid', 'overdue', 'failed'];
++
+     protected $fillable = [
+         'rental_contract_id', 'user_id', 'amount', 'due_date', 'payment_date',
+         'payment_method', 'reference_number', 'status', 'notes',
++        'proof_path', 'proof_original_filename', 'submitted_at',
++        'reviewed_by', 'reviewed_at', 'review_reason',
+     ];
+ 
+     protected function casts(): array
+@@ -18,6 +30,8 @@ protected function casts(): array
+             'amount' => 'decimal:2',
+             'due_date' => 'date',
+             'payment_date' => 'date',
++            'submitted_at' => 'datetime',
++            'reviewed_at' => 'datetime',
+         ];
+     }
+ 
+@@ -30,4 +44,35 @@ public function tenant(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+     }
++
++    public function reviewer(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'reviewed_by');
++    }
++
++    public function statusHistories(): HasMany
++    {
++        return $this->hasMany(PaymentStatusHistory::class)->latest('created_at');
++    }
++
++    /**
++     * Computed lateness, independent of the stored 'overdue' status (which an
++     * owner can still set manually for cash-recorded payments). Used to group
++     * "Due Soon" vs "Overdue" in the tenant payments view.
++     */
++    public function isPastDue(): bool
++    {
++        return in_array($this->status, ['pending', 'overdue'], true)
++            && $this->due_date->isPast();
++    }
++
++    public function canBeSubmittedByTenant(): bool
++    {
++        return $this->status === 'pending';
++    }
++
++    public function canBeReviewed(): bool
++    {
++        return $this->status === 'submitted';
++    }
+ }
+diff --git a/app/Models/PaymentStatusHistory.php b/app/Models/PaymentStatusHistory.php
+new file mode 100644
+index 0000000..6110d57
+--- /dev/null
++++ b/app/Models/PaymentStatusHistory.php
+@@ -0,0 +1,39 @@
++<?php
++
++namespace App\Models;
++
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++
++class PaymentStatusHistory extends Model
++{
++    public $timestamps = false;
++
++    protected $fillable = [
++        'payment_id', 'actor_id', 'from_status', 'to_status', 'reason',
++    ];
++
++    protected function casts(): array
++    {
++        return [
++            'created_at' => 'datetime',
++        ];
++    }
++
++    protected static function booted(): void
++    {
++        static::creating(function (self $history) {
++            $history->created_at ??= now();
++        });
++    }
++
++    public function payment(): BelongsTo
++    {
++        return $this->belongsTo(Payment::class);
++    }
++
++    public function actor(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'actor_id');
++    }
++}
+diff --git a/app/Notifications/PaymentReviewedNotification.php b/app/Notifications/PaymentReviewedNotification.php
+new file mode 100644
+index 0000000..7f6dcfb
+--- /dev/null
++++ b/app/Notifications/PaymentReviewedNotification.php
+@@ -0,0 +1,52 @@
++<?php
++
++namespace App\Notifications;
++
++use App\Models\Payment;
++use Illuminate\Bus\Queueable;
++use Illuminate\Notifications\Messages\MailMessage;
++use Illuminate\Notifications\Notification;
++
++class PaymentReviewedNotification extends Notification
++{
++    use Queueable;
++
++    public function __construct(protected Payment $payment)
++    {
++    }
++
++    public function via(object $notifiable): array
++    {
++        return ['mail', 'database'];
++    }
++
++    public function toMail(object $notifiable): MailMessage
++    {
++        $mail = (new MailMessage)->subject('Update on your payment');
++        $amount = number_format($this->payment->amount, 2);
++
++        return match ($this->payment->status) {
++            'paid' => $mail
++                ->line("Your payment of ₱{$amount} has been approved.")
++                ->action('Download receipt', url('/tenant/payments/'.$this->payment->id.'/receipt')),
++            'failed' => $mail
++                ->line("Your payment of ₱{$amount} was rejected.")
++                ->line('Reason: '.$this->payment->review_reason)
++                ->action('View payment', url('/tenant/payments/'.$this->payment->id)),
++            'pending' => $mail
++                ->line("Your payment of ₱{$amount} needs a correction before it can be approved.")
++                ->line('Details: '.$this->payment->review_reason)
++                ->action('Resubmit payment', url('/tenant/payments/'.$this->payment->id)),
++            default => $mail->line('Your payment status has been updated.'),
++        };
++    }
++
++    public function toArray(object $notifiable): array
++    {
++        return [
++            'type' => 'payment_reviewed',
++            'payment_id' => $this->payment->id,
++            'status' => $this->payment->status,
++        ];
++    }
++}
+diff --git a/app/Notifications/PaymentSubmittedNotification.php b/app/Notifications/PaymentSubmittedNotification.php
+new file mode 100644
+index 0000000..a9e880e
+--- /dev/null
++++ b/app/Notifications/PaymentSubmittedNotification.php
+@@ -0,0 +1,43 @@
++<?php
++
++namespace App\Notifications;
++
++use App\Models\Payment;
++use Illuminate\Bus\Queueable;
++use Illuminate\Notifications\Messages\MailMessage;
++use Illuminate\Notifications\Notification;
++
++class PaymentSubmittedNotification extends Notification
++{
++    use Queueable;
++
++    public function __construct(protected Payment $payment)
++    {
++    }
++
++    public function via(object $notifiable): array
++    {
++        return ['mail', 'database'];
++    }
++
++    public function toMail(object $notifiable): MailMessage
++    {
++        $tenant = $this->payment->tenant;
++
++        return (new MailMessage)
++            ->subject('A tenant submitted a payment for review')
++            ->line("{$tenant->first_name} {$tenant->last_name} submitted a payment of ₱".number_format($this->payment->amount, 2).' for review.')
++            ->line('Reference number: '.$this->payment->reference_number)
++            ->action('Review payment', url('/owner/payments/'.$this->payment->id));
++    }
++
++    public function toArray(object $notifiable): array
++    {
++        return [
++            'type' => 'payment_submitted',
++            'payment_id' => $this->payment->id,
++            'rental_contract_id' => $this->payment->rental_contract_id,
++            'amount' => (string) $this->payment->amount,
++        ];
++    }
++}
+diff --git a/app/Policies/PaymentPolicy.php b/app/Policies/PaymentPolicy.php
+new file mode 100644
+index 0000000..c366a6d
+--- /dev/null
++++ b/app/Policies/PaymentPolicy.php
+@@ -0,0 +1,52 @@
++<?php
++
++namespace App\Policies;
++
++use App\Models\Payment;
++use App\Models\User;
++
++class PaymentPolicy
++{
++    public function view(User $user, Payment $payment): bool
++    {
++        if ($user->isSuperAdmin()) {
++            return true;
++        }
++
++        if ($user->isTenant()) {
++            return $payment->user_id === $user->id;
++        }
++
++        return $user->isOwner()
++            ? $payment->contract->owner_id === $user->id
++            : $payment->contract->property->managers()->where('users.id', $user->id)->exists();
++    }
++
++    /**
++     * Tenant submitting method/reference/proof against a due payment record.
++     */
++    public function submit(User $user, Payment $payment): bool
++    {
++        return $user->isTenant()
++            && $payment->user_id === $user->id
++            && $payment->canBeSubmittedByTenant();
++    }
++
++    /**
++     * Owner/manager/super admin reviewing a tenant's submitted payment.
++     */
++    public function review(User $user, Payment $payment): bool
++    {
++        if (! $payment->canBeReviewed()) {
++            return false;
++        }
++
++        if ($user->isSuperAdmin()) {
++            return true;
++        }
++
++        return $user->isOwner()
++            ? $payment->contract->owner_id === $user->id
++            : ($user->isManager() && $payment->contract->property->managers()->where('users.id', $user->id)->exists());
++    }
++}
+diff --git a/app/Providers/AppServiceProvider.php b/app/Providers/AppServiceProvider.php
+index d665d10..2b29b3f 100644
+--- a/app/Providers/AppServiceProvider.php
++++ b/app/Providers/AppServiceProvider.php
+@@ -3,11 +3,13 @@
+ namespace App\Providers;
+ 
+ use App\Models\MaintenanceRequest;
++use App\Models\Payment;
+ use App\Models\Property;
+ use App\Models\RentalApplication;
+ use App\Models\RentalContract;
+ use App\Models\ViewingRequest;
+ use App\Policies\MaintenanceRequestPolicy;
++use App\Policies\PaymentPolicy;
+ use App\Policies\PropertyPolicy;
+ use App\Policies\RentalApplicationPolicy;
+ use App\Policies\RentalContractPolicy;
+@@ -32,6 +34,7 @@ public function boot(): void
+         Gate::policy(ViewingRequest::class, ViewingRequestPolicy::class);
+         Gate::policy(RentalContract::class, RentalContractPolicy::class);
+         Gate::policy(MaintenanceRequest::class, MaintenanceRequestPolicy::class);
++        Gate::policy(Payment::class, PaymentPolicy::class);
+ 
+         // Mobile API rate limit: 60 requests/minute per authenticated user,
+         // or per IP for unauthenticated (public property browsing) requests.
+diff --git a/app/Services/PaymentService.php b/app/Services/PaymentService.php
+new file mode 100644
+index 0000000..68377e9
+--- /dev/null
++++ b/app/Services/PaymentService.php
+@@ -0,0 +1,116 @@
++<?php
++
++namespace App\Services;
++
++use App\Models\Payment;
++use App\Models\User;
++use App\Notifications\PaymentReviewedNotification;
++use App\Notifications\PaymentSubmittedNotification;
++use Illuminate\Http\UploadedFile;
++use Illuminate\Support\Facades\DB;
++
++class PaymentService
++{
++    /**
++     * Tenant submits method/reference/date and optional proof against an
++     * existing due payment record. Guarded against duplicate submission and
++     * mismatched/overpayment amounts by the Form Request + Policy before
++     * this ever runs; this method just performs the transition.
++     */
++    public function submit(Payment $payment, User $tenant, array $data, ?UploadedFile $proof = null): Payment
++    {
++        return DB::transaction(function () use ($payment, $tenant, $data, $proof) {
++            $fromStatus = $payment->status;
++
++            $update = [
++                'payment_method' => $data['payment_method'],
++                'reference_number' => $data['reference_number'],
++                'payment_date' => $data['payment_date'],
++                'status' => 'submitted',
++                'submitted_at' => now(),
++                // Clear any prior reviewer decision — this is a fresh submission.
++                'reviewed_by' => null,
++                'reviewed_at' => null,
++                'review_reason' => null,
++            ];
++
++            if ($proof) {
++                $path = $proof->store("payments/{$payment->rental_contract_id}/{$payment->id}", 'local');
++                $update['proof_path'] = $path;
++                $update['proof_original_filename'] = $proof->getClientOriginalName();
++            }
++
++            $payment->update($update);
++
++            $payment->statusHistories()->create([
++                'actor_id' => $tenant->id,
++                'from_status' => $fromStatus,
++                'to_status' => 'submitted',
++                'reason' => 'Tenant submitted payment for review.',
++            ]);
++
++            $this->notifyReviewers($payment->fresh());
++
++            return $payment->fresh();
++        });
++    }
++
++    public function approve(Payment $payment, User $reviewer): Payment
++    {
++        return $this->transition($payment, $reviewer, 'paid', null);
++    }
++
++    public function reject(Payment $payment, User $reviewer, string $reason): Payment
++    {
++        return $this->transition($payment, $reviewer, 'failed', $reason);
++    }
++
++    /**
++     * Sends the submission back to the tenant with a note on what to fix,
++     * rather than a hard rejection — the tenant can resubmit against the
++     * same payment record.
++     */
++    public function requestCorrection(Payment $payment, User $reviewer, string $reason): Payment
++    {
++        return $this->transition($payment, $reviewer, 'pending', $reason);
++    }
++
++    protected function transition(Payment $payment, User $reviewer, string $toStatus, ?string $reason): Payment
++    {
++        return DB::transaction(function () use ($payment, $reviewer, $toStatus, $reason) {
++            $fromStatus = $payment->status;
++
++            $payment->update([
++                'status' => $toStatus,
++                'reviewed_by' => $reviewer->id,
++                'reviewed_at' => now(),
++                'review_reason' => $reason,
++            ]);
++
++            $payment->statusHistories()->create([
++                'actor_id' => $reviewer->id,
++                'from_status' => $fromStatus,
++                'to_status' => $toStatus,
++                'reason' => $reason,
++            ]);
++
++            $payment->tenant->notify(new PaymentReviewedNotification($payment->fresh()));
++
++            return $payment->fresh();
++        });
++    }
++
++    protected function notifyReviewers(Payment $payment): void
++    {
++        $contract = $payment->contract()->with('property.managers', 'owner')->first();
++
++        $recipients = collect([$contract->owner])
++            ->merge($contract->property->managers)
++            ->filter()
++            ->unique('id');
++
++        foreach ($recipients as $recipient) {
++            $recipient->notify(new PaymentSubmittedNotification($payment));
++        }
++    }
++}
+diff --git a/database/migrations/2026_09_10_000001_add_workflow_fields_to_payments_table.php b/database/migrations/2026_09_10_000001_add_workflow_fields_to_payments_table.php
+new file mode 100644
+index 0000000..91a5e5a
+--- /dev/null
++++ b/database/migrations/2026_09_10_000001_add_workflow_fields_to_payments_table.php
+@@ -0,0 +1,40 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::table('payments', function (Blueprint $table) {
++            // Tenant-submitted proof of payment (private disk, same pattern as
++            // verification_documents / application documents).
++            $table->string('proof_path')->nullable()->after('reference_number');
++            $table->string('proof_original_filename')->nullable()->after('proof_path');
++
++            // When the tenant actually submitted this payment for review.
++            // Distinct from payment_date (which is the date they say they paid).
++            $table->timestamp('submitted_at')->nullable()->after('payment_date');
++
++            // Who reviewed the submission (owner, manager, or super admin) and when.
++            $table->foreignId('reviewed_by')->nullable()->after('status')->constrained('users')->nullOnDelete();
++            $table->timestamp('reviewed_at')->nullable()->after('reviewed_by');
++
++            // Rejection reason or "please correct and resubmit" note.
++            $table->text('review_reason')->nullable()->after('reviewed_at');
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::table('payments', function (Blueprint $table) {
++            $table->dropConstrainedForeignId('reviewed_by');
++            $table->dropColumn([
++                'proof_path', 'proof_original_filename', 'submitted_at',
++                'reviewed_at', 'review_reason',
++            ]);
++        });
++    }
++};
+diff --git a/database/migrations/2026_09_10_000002_create_payment_status_histories_table.php b/database/migrations/2026_09_10_000002_create_payment_status_histories_table.php
+new file mode 100644
+index 0000000..ad3e293
+--- /dev/null
++++ b/database/migrations/2026_09_10_000002_create_payment_status_histories_table.php
+@@ -0,0 +1,35 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        // Append-only audit trail: one row per status transition, so
++        // "who changed what, when, and why" is never overwritten. Mirrors
++        // the reasoning behind owner_verifications being attempt-based.
++        Schema::create('payment_status_histories', function (Blueprint $table) {
++            $table->id();
++            $table->foreignId('payment_id')->constrained()->cascadeOnDelete();
++
++            // Null actor = system-driven transition (e.g. an automated overdue sweep).
++            $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
++
++            $table->string('from_status')->nullable();
++            $table->string('to_status');
++            $table->text('reason')->nullable();
++
++            $table->timestamp('created_at')->useCurrent();
++
++            $table->index(['payment_id', 'created_at']);
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('payment_status_histories');
++    }
++};
+diff --git a/resources/views/layouts/app.blade.php b/resources/views/layouts/app.blade.php
+index b7f39f7..79b96b3 100644
+--- a/resources/views/layouts/app.blade.php
++++ b/resources/views/layouts/app.blade.php
+@@ -4,26 +4,27 @@
+     <meta charset="utf-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1">
+     <title>@yield('title', 'Dashboard') · Cavite Rental Platform</title>
+-    <script src="https://cdn.tailwindcss.com"></script>
++    @vite(['resources/css/app.css', 'resources/js/app.js'])
+     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+     <style>[x-cloak] { display: none !important; }</style>
+     @stack('head')
+ </head>
+-<body class="min-h-screen bg-slate-50">
+-    <nav class="bg-white border-b border-slate-200" x-data="{ mobileOpen: false }">
+-        <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
++<body class="app-shell" data-role="{{ auth()->user()->isTenant() ? 'tenant' : (auth()->user()->isSuperAdmin() ? 'admin' : 'host') }}">
++    <nav class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200" x-data="{ mobileOpen: false }">
++        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+             <div class="flex items-center gap-6">
+-                <a href="{{ route('dashboard') }}" class="font-bold text-slate-900 shrink-0">Cavite<span class="text-blue-600">Rentals</span></a>
++                <a href="{{ route('dashboard') }}" class="font-extrabold tracking-tight text-slate-900 shrink-0 text-lg">Cavite<span class="text-blue-600">Rentals</span></a>
+ 
+                 {{-- Desktop nav links, grouped into dropdowns per role --}}
+-                <div class="hidden md:flex items-center gap-6">
++                <div class="hidden lg:flex items-center gap-6">
+                     @if (in_array(auth()->user()->role->slug, ['owner', 'manager', 'super_admin']))
+                         @include('partials.nav-link', ['route' => 'owner.properties.index', 'label' => 'My Properties', 'notifyTypes' => 'property_verification'])
+                         @include('partials.nav-dropdown', ['label' => 'Rentals', 'links' => [
+                             ['route' => 'owner.applications.index', 'label' => 'Applications', 'notifyTypes' => 'new_rental_application'],
+                             ['route' => 'owner.viewings.index', 'label' => 'Viewing Requests', 'notifyTypes' => 'new_viewing_request'],
+                             ['route' => 'owner.contracts.index', 'label' => 'Contracts'],
++                            ['route' => 'owner.payments.index', 'label' => 'Payments', 'notifyTypes' => 'payment_submitted'],
+                             ['route' => 'owner.maintenance.index', 'label' => 'Maintenance', 'notifyTypes' => 'new_maintenance_request'],
+                         ]])
+                     @endif
+@@ -34,7 +35,7 @@
+                             ['route' => 'tenant.applications.index', 'label' => 'My Applications', 'notifyTypes' => 'rental_application_status'],
+                             ['route' => 'tenant.viewings.index', 'label' => 'My Viewings', 'notifyTypes' => 'viewing_request_status'],
+                             ['route' => 'tenant.contracts.index', 'label' => 'My Contracts', 'notifyTypes' => 'contract_activated'],
+-                            ['route' => 'tenant.payments.index', 'label' => 'My Payments'],
++                            ['route' => 'tenant.payments.index', 'label' => 'My Payments', 'notifyTypes' => 'payment_reviewed'],
+                             ['route' => 'tenant.maintenance.index', 'label' => 'Maintenance', 'notifyTypes' => 'maintenance_request_status'],
+                         ]])
+                     @endif
+@@ -55,7 +56,7 @@
+                 @include('partials.profile-dropdown')
+ 
+                 {{-- Mobile hamburger --}}
+-                <button @click="mobileOpen = !mobileOpen" class="md:hidden text-slate-600">
++                <button @click="mobileOpen = !mobileOpen" aria-label="Toggle navigation" class="lg:hidden text-slate-600 p-2 rounded-lg hover:bg-slate-100">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                         <path x-show="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                         <path x-show="mobileOpen" x-cloak stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+@@ -65,12 +66,13 @@
+         </div>
+ 
+         {{-- Mobile menu: flat list of every link, since nested dropdowns are awkward on small screens --}}
+-        <div x-show="mobileOpen" x-cloak x-transition class="md:hidden border-t border-slate-100 px-4 py-3 space-y-2">
++        <div x-show="mobileOpen" x-cloak x-transition class="lg:hidden border-t border-slate-100 px-4 py-3 space-y-2 bg-white">
+             @if (in_array(auth()->user()->role->slug, ['owner', 'manager', 'super_admin']))
+                 <a href="{{ route('owner.properties.index') }}" class="block text-sm text-slate-600 py-1">My Properties</a>
+                 <a href="{{ route('owner.applications.index') }}" class="block text-sm text-slate-600 py-1">Applications</a>
+                 <a href="{{ route('owner.viewings.index') }}" class="block text-sm text-slate-600 py-1">Viewing Requests</a>
+                 <a href="{{ route('owner.contracts.index') }}" class="block text-sm text-slate-600 py-1">Contracts</a>
++                <a href="{{ route('owner.payments.index') }}" class="block text-sm text-slate-600 py-1">Payments</a>
+                 <a href="{{ route('owner.maintenance.index') }}" class="block text-sm text-slate-600 py-1">Maintenance</a>
+             @endif
+             @if (auth()->user()->isTenant())
+@@ -92,7 +94,7 @@
+         </div>
+     </nav>
+ 
+-    <main class="max-w-6xl mx-auto px-4 py-8">
++    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
+         @yield('content')
+     </main>
+ 
+diff --git a/resources/views/owner/contracts/show.blade.php b/resources/views/owner/contracts/show.blade.php
+index 788a518..78a0f5d 100644
+--- a/resources/views/owner/contracts/show.blade.php
++++ b/resources/views/owner/contracts/show.blade.php
+@@ -3,7 +3,7 @@
+ @section('title', 'Contract — '.$contract->property->name)
+ 
+ @section('content')
+-    <a href="{{ route('owner.contracts.index') }}" class="text-sm text-blue-600 hover:underline">&larr; Contracts</a>
++    <a href="{{ route('owner.contracts.index') }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>Contracts</span></a>
+ 
+     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+         <div class="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-6">
+@@ -46,7 +46,10 @@
+         </div>
+ 
+         <div class="bg-white border border-slate-200 rounded-xl p-6">
+-            <p class="text-sm font-medium text-slate-700 mb-3">Payments</p>
++            <div class="flex items-center justify-between mb-3">
++                <p class="text-sm font-medium text-slate-700">Payments</p>
++                <a href="{{ route('owner.payments.index') }}" class="text-xs text-blue-600 hover:underline">Review queue</a>
++            </div>
+ 
+             @if ($contract->status === 'active')
+                 <form method="POST" action="{{ route('owner.contracts.payments.store', $contract) }}" class="space-y-2 mb-4 text-xs">
+@@ -78,11 +81,14 @@
+                 <ul class="text-xs space-y-2">
+                     @foreach ($contract->payments as $payment)
+                         <li class="flex items-center justify-between border-b border-slate-100 pb-2">
+-                            <span>₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j') }}</span>
++                            <a href="{{ route('owner.payments.show', $payment) }}" class="hover:underline">
++                                ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j') }}
++                            </a>
+                             <span class="px-2 py-0.5 rounded-full
+                                 {{ match($payment->status) {
+                                     'paid' => 'bg-green-50 text-green-700',
+                                     'overdue', 'failed' => 'bg-red-50 text-red-700',
++                                    'submitted' => 'bg-blue-50 text-blue-700',
+                                     default => 'bg-amber-50 text-amber-700',
+                                 } }}">
+                                 {{ str($payment->status)->title() }}
+diff --git a/resources/views/owner/payments/index.blade.php b/resources/views/owner/payments/index.blade.php
+new file mode 100644
+index 0000000..95c74b5
+--- /dev/null
++++ b/resources/views/owner/payments/index.blade.php
+@@ -0,0 +1,69 @@
++@extends('layouts.app')
++
++@section('title', 'Payments')
++
++@section('content')
++    <div class="flex items-center justify-between mb-6">
++        <h1 class="text-xl font-semibold text-slate-900">Payments</h1>
++        @if ($pendingReviewCount > 0)
++            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
++                {{ $pendingReviewCount }} awaiting review
++            </span>
++        @endif
++    </div>
++
++    <div class="flex flex-wrap gap-2 mb-6">
++        @foreach ([
++            'submitted' => 'Pending Review',
++            'pending' => 'Due / Needs Resubmission',
++            'paid' => 'Paid',
++            'failed' => 'Rejected',
++            'overdue' => 'Overdue',
++            'all' => 'All',
++        ] as $key => $label)
++            <a href="{{ route('owner.payments.index', ['status' => $key]) }}"
++               class="text-xs font-medium px-3 py-1.5 rounded-full border {{ $status === $key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300' }}">
++                {{ $label }}
++            </a>
++        @endforeach
++    </div>
++
++    @if ($payments->isEmpty())
++        @include('partials.empty-state', [
++            'title' => 'Nothing here',
++            'description' => 'No payments match this filter right now.',
++        ])
++    @else
++        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
++            <table class="w-full text-sm">
++                <thead class="bg-slate-50 text-slate-500 text-left">
++                    <tr>
++                        <th class="px-4 py-3">Tenant</th>
++                        <th class="px-4 py-3">Property</th>
++                        <th class="px-4 py-3">Amount</th>
++                        <th class="px-4 py-3">Submitted</th>
++                        <th class="px-4 py-3">Status</th>
++                        <th class="px-4 py-3"></th>
++                    </tr>
++                </thead>
++                <tbody class="divide-y divide-slate-100">
++                    @foreach ($payments as $payment)
++                        <tr>
++                            <td class="px-4 py-3 text-slate-900">{{ $payment->tenant->first_name }} {{ $payment->tenant->last_name }}</td>
++                            <td class="px-4 py-3 text-slate-600">{{ $payment->contract->property->name }}</td>
++                            <td class="px-4 py-3 text-slate-600">₱{{ number_format($payment->amount, 2) }}</td>
++                            <td class="px-4 py-3 text-slate-600">{{ $payment->submitted_at?->format('M j, Y') ?? '—' }}</td>
++                            <td class="px-4 py-3">@include('partials.payment-status-badge', ['payment' => $payment])</td>
++                            <td class="px-4 py-3 text-right">
++                                <a href="{{ route('owner.payments.show', $payment) }}" class="text-sm text-blue-600 hover:underline">
++                                    {{ $payment->canBeReviewed() ? 'Review' : 'View' }}
++                                </a>
++                            </td>
++                        </tr>
++                    @endforeach
++                </tbody>
++            </table>
++        </div>
++        <div class="mt-6">{{ $payments->links() }}</div>
++    @endif
++@endsection
+diff --git a/resources/views/owner/payments/show.blade.php b/resources/views/owner/payments/show.blade.php
+new file mode 100644
+index 0000000..7d9aa28
+--- /dev/null
++++ b/resources/views/owner/payments/show.blade.php
+@@ -0,0 +1,121 @@
++@extends('layouts.app')
++
++@section('title', 'Payment Review')
++
++@section('content')
++    <a href="{{ route('owner.payments.index') }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>Payments</span></a>
++
++    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
++        <div class="lg:col-span-2 space-y-6">
++            <div class="bg-white border border-slate-200 rounded-xl p-6">
++                <div class="flex items-center justify-between mb-4">
++                    <h1 class="text-lg font-semibold text-slate-900">{{ $payment->tenant->first_name }} {{ $payment->tenant->last_name }}</h1>
++                    @include('partials.payment-status-badge', ['payment' => $payment])
++                </div>
++
++                <dl class="grid grid-cols-2 gap-y-2 text-sm">
++                    <dt class="text-slate-500">Property</dt><dd class="text-slate-900">{{ $payment->contract->property->name }}</dd>
++                    <dt class="text-slate-500">Amount</dt><dd class="text-slate-900 font-medium">₱{{ number_format($payment->amount, 2) }}</dd>
++                    <dt class="text-slate-500">Due date</dt><dd class="text-slate-900">{{ $payment->due_date->format('M j, Y') }}</dd>
++                    @if ($payment->payment_date)
++                        <dt class="text-slate-500">Payment date</dt><dd class="text-slate-900">{{ $payment->payment_date->format('M j, Y') }}</dd>
++                    @endif
++                    @if ($payment->payment_method)
++                        <dt class="text-slate-500">Method</dt><dd class="text-slate-900">{{ str($payment->payment_method)->title() }}</dd>
++                    @endif
++                    @if ($payment->reference_number)
++                        <dt class="text-slate-500">Reference #</dt><dd class="text-slate-900">{{ $payment->reference_number }}</dd>
++                    @endif
++                    @if ($payment->reviewer)
++                        <dt class="text-slate-500">Last reviewed by</dt><dd class="text-slate-900">{{ $payment->reviewer->first_name }} {{ $payment->reviewer->last_name }}</dd>
++                    @endif
++                </dl>
++
++                @if ($payment->proof_path)
++                    <div class="mt-4 pt-4 border-t border-slate-100">
++                        <a href="{{ route('payments.proof.download', $payment) }}" class="text-sm text-blue-600 hover:underline">
++                            Download submitted proof of payment
++                        </a>
++                    </div>
++                @else
++                    <p class="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400">No proof file was attached to this submission.</p>
++                @endif
++
++                @if ($payment->status === 'paid')
++                    <div class="mt-4 pt-4 border-t border-slate-100">
++                        <a href="{{ route('owner.payments.receipt', $payment) }}" class="text-sm text-blue-600 hover:underline">Download receipt (PDF)</a>
++                    </div>
++                @endif
++            </div>
++
++            @if ($payment->canBeReviewed())
++                <div class="bg-white border border-slate-200 rounded-xl p-6">
++                    <h2 class="text-sm font-semibold text-slate-700 mb-4">Review this submission</h2>
++
++                    @include('partials.validation-errors')
++
++                    <div class="flex flex-wrap gap-3">
++                        <form method="POST" action="{{ route('owner.payments.review', $payment) }}">
++                            @csrf @method('PATCH')
++                            <input type="hidden" name="action" value="approve">
++                            <button type="submit" class="min-h-[44px] px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl">
++                                Approve
++                            </button>
++                        </form>
++
++                        <button type="button" onclick="document.getElementById('reject-form').classList.toggle('hidden')"
++                                class="min-h-[44px] px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 text-sm font-medium rounded-xl">
++                            Reject
++                        </button>
++
++                        <button type="button" onclick="document.getElementById('correction-form').classList.toggle('hidden')"
++                                class="min-h-[44px] px-5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-medium rounded-xl">
++                            Request correction
++                        </button>
++                    </div>
++
++                    <form id="reject-form" method="POST" action="{{ route('owner.payments.review', $payment) }}" class="hidden mt-4 space-y-2">
++                        @csrf @method('PATCH')
++                        <input type="hidden" name="action" value="reject">
++                        <label class="block text-xs font-medium text-slate-500">Reason for rejection</label>
++                        <textarea name="reason" required maxlength="1000" rows="3" class="w-full rounded-lg border-slate-300 text-sm"
++                                  placeholder="e.g. reference number doesn't match our records"></textarea>
++                        <button type="submit" class="text-sm px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Confirm rejection</button>
++                    </form>
++
++                    <form id="correction-form" method="POST" action="{{ route('owner.payments.review', $payment) }}" class="hidden mt-4 space-y-2">
++                        @csrf @method('PATCH')
++                        <input type="hidden" name="action" value="request_correction">
++                        <label class="block text-xs font-medium text-slate-500">What needs to be corrected?</label>
++                        <textarea name="reason" required maxlength="1000" rows="3" class="w-full rounded-lg border-slate-300 text-sm"
++                                  placeholder="e.g. please re-upload a clearer photo of the receipt"></textarea>
++                        <button type="submit" class="text-sm px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg">Send back for correction</button>
++                    </form>
++                </div>
++            @endif
++        </div>
++
++        <div class="bg-white border border-slate-200 rounded-xl p-6">
++            <p class="text-sm font-medium text-slate-700 mb-3">Activity</p>
++            @if ($payment->statusHistories->isEmpty())
++                <p class="text-xs text-slate-400">No activity yet.</p>
++            @else
++                <ul class="text-xs space-y-3">
++                    @foreach ($payment->statusHistories as $history)
++                        <li class="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
++                            <p class="text-slate-900 font-medium">{{ str($history->to_status)->title() }}</p>
++                            <p class="text-slate-500">{{ $history->created_at->format('M j, Y g:i A') }}
++                                @if ($history->actor)
++                                    &middot; {{ $history->actor->first_name }} {{ $history->actor->last_name }}
++                                @endif
++                            </p>
++                            @if ($history->reason)
++                                <p class="text-slate-500 mt-1">{{ $history->reason }}</p>
++                            @endif
++                        </li>
++                    @endforeach
++                </ul>
++            @endif
++        </div>
++    </div>
++@endsection
+diff --git a/resources/views/partials/payment-status-badge.blade.php b/resources/views/partials/payment-status-badge.blade.php
+new file mode 100644
+index 0000000..ee7f781
+--- /dev/null
++++ b/resources/views/partials/payment-status-badge.blade.php
+@@ -0,0 +1,17 @@
++{{-- Variables: $payment (required) --}}
++@php
++    $label = match(true) {
++        $payment->isPastDue() => 'Overdue',
++        $payment->status === 'pending' => 'Due Soon',
++        $payment->status === 'submitted' => 'Pending Review',
++        default => (string) str($payment->status)->title(),
++    };
++    $classes = match(true) {
++        $payment->isPastDue() => 'bg-red-50 text-red-700',
++        $payment->status === 'paid' => 'bg-green-50 text-green-700',
++        $payment->status === 'failed' => 'bg-red-50 text-red-700',
++        $payment->status === 'submitted' => 'bg-blue-50 text-blue-700',
++        default => 'bg-amber-50 text-amber-700',
++    };
++@endphp
++<span class="text-xs font-medium px-2 py-1 rounded-full {{ $classes }}">{{ $label }}</span>
+diff --git a/resources/views/pdf/payment-receipt.blade.php b/resources/views/pdf/payment-receipt.blade.php
+new file mode 100644
+index 0000000..77f331c
+--- /dev/null
++++ b/resources/views/pdf/payment-receipt.blade.php
+@@ -0,0 +1,39 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <meta charset="utf-8">
++    <style>
++        body { font-family: 'DejaVu Sans', sans-serif; font-size: 12px; color: #1e293b; }
++        h1 { font-size: 18px; margin-bottom: 4px; }
++        .muted { color: #64748b; }
++        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
++        td { padding: 6px 0; vertical-align: top; }
++        td.label { width: 200px; color: #64748b; }
++        .section { margin-top: 24px; }
++        .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f0fdf4; color: #15803d; font-weight: bold; }
++        .footer { margin-top: 48px; padding-top: 12px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 10px; }
++    </style>
++</head>
++<body>
++    <h1>Payment Receipt</h1>
++    <p class="muted">Receipt for Payment #{{ $payment->id }} &middot; Generated {{ now()->format('F j, Y') }}</p>
++
++    <span class="badge">PAID</span>
++
++    <div class="section">
++        <table>
++            <tr><td class="label">Property</td><td>{{ $payment->contract->property->name }}</td></tr>
++            <tr><td class="label">Tenant</td><td>{{ $payment->contract->tenant->first_name }} {{ $payment->contract->tenant->last_name }} ({{ $payment->contract->tenant->email }})</td></tr>
++            <tr><td class="label">Amount</td><td>₱{{ number_format($payment->amount, 2) }}</td></tr>
++            <tr><td class="label">Due date</td><td>{{ $payment->due_date->format('F j, Y') }}</td></tr>
++            <tr><td class="label">Payment date</td><td>{{ $payment->payment_date?->format('F j, Y') ?? '—' }}</td></tr>
++            <tr><td class="label">Payment method</td><td>{{ $payment->payment_method ? ucfirst(str_replace('_', ' ', $payment->payment_method)) : '—' }}</td></tr>
++            <tr><td class="label">Reference number</td><td>{{ $payment->reference_number ?? '—' }}</td></tr>
++            <tr><td class="label">Approved by</td><td>{{ $payment->reviewer ? $payment->reviewer->first_name.' '.$payment->reviewer->last_name : '—' }}</td></tr>
++            <tr><td class="label">Approved on</td><td>{{ $payment->reviewed_at?->format('F j, Y g:i A') ?? '—' }}</td></tr>
++        </table>
++    </div>
++
++    <p class="footer">This receipt was generated automatically by Cavite Rental Platform and reflects the payment record as of the generation date above.</p>
++</body>
++</html>
+diff --git a/resources/views/tenant/contracts/show.blade.php b/resources/views/tenant/contracts/show.blade.php
+index 23b5994..935401a 100644
+--- a/resources/views/tenant/contracts/show.blade.php
++++ b/resources/views/tenant/contracts/show.blade.php
+@@ -3,7 +3,7 @@
+ @section('title', 'My Contract')
+ 
+ @section('content')
+-    <a href="{{ route('tenant.contracts.index') }}" class="text-sm text-blue-600 hover:underline">&larr; My Contracts</a>
++    <a href="{{ route('tenant.contracts.index') }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>My Contracts</span></a>
+ 
+     <div class="bg-white border border-slate-200 rounded-xl p-6 mt-4 max-w-2xl">
+         <div class="flex items-center justify-between mb-4">
+@@ -41,11 +41,14 @@
+                 <ul class="text-sm space-y-1">
+                     @foreach ($contract->payments as $payment)
+                         <li class="flex items-center justify-between">
+-                            <span>₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j, Y') }}</span>
++                            <a href="{{ route('tenant.payments.show', $payment) }}" class="hover:underline">
++                                ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j, Y') }}
++                            </a>
+                             <span class="text-xs px-2 py-0.5 rounded-full
+                                 {{ match($payment->status) {
+                                     'paid' => 'bg-green-50 text-green-700',
+                                     'overdue', 'failed' => 'bg-red-50 text-red-700',
++                                    'submitted' => 'bg-blue-50 text-blue-700',
+                                     default => 'bg-amber-50 text-amber-700',
+                                 } }}">
+                                 {{ str($payment->status)->title() }}
+diff --git a/resources/views/tenant/payments/index.blade.php b/resources/views/tenant/payments/index.blade.php
+index c1156c4..f43870b 100644
+--- a/resources/views/tenant/payments/index.blade.php
++++ b/resources/views/tenant/payments/index.blade.php
+@@ -5,42 +5,65 @@
+ @section('content')
+     <h1 class="text-xl font-semibold text-slate-900 mb-6">My Payments</h1>
+ 
+-    @if ($payments->isEmpty())
+-        <div class="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500">No payments recorded yet.</div>
++    @php
++        $groups = [
++            ['key' => 'overdue', 'title' => 'Overdue', 'items' => $overdue, 'hint' => 'These are past due — submit a payment as soon as you can.'],
++            ['key' => 'due-soon', 'title' => 'Due Soon', 'items' => $dueSoon, 'hint' => null],
++            ['key' => 'pending-review', 'title' => 'Pending Review', 'items' => $pendingReview, 'hint' => "You've submitted these — your owner is reviewing them."],
++            ['key' => 'paid', 'title' => 'Paid', 'items' => $paid, 'hint' => null],
++            ['key' => 'failed', 'title' => 'Needs Attention', 'items' => $failed, 'hint' => 'These were rejected. Open one to see why and resubmit.'],
++        ];
++        $anyPayments = collect($groups)->sum(fn ($g) => $g['items']->count()) > 0;
++    @endphp
++
++    @if (! $anyPayments)
++        @include('partials.empty-state', [
++            'title' => 'No payments yet',
++            'description' => 'Payments will appear here once your contract is active and your owner sets up your payment schedule.',
++        ])
+     @else
+-        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+-            <table class="w-full text-sm">
+-                <thead class="bg-slate-50 text-slate-500 text-left">
+-                    <tr>
+-                        <th class="px-4 py-3">Property</th>
+-                        <th class="px-4 py-3">Amount</th>
+-                        <th class="px-4 py-3">Due date</th>
+-                        <th class="px-4 py-3">Paid on</th>
+-                        <th class="px-4 py-3">Status</th>
+-                    </tr>
+-                </thead>
+-                <tbody class="divide-y divide-slate-100">
+-                    @foreach ($payments as $payment)
+-                        <tr>
+-                            <td class="px-4 py-3 font-medium text-slate-900">{{ $payment->contract->property->name }}</td>
+-                            <td class="px-4 py-3 text-slate-600">₱{{ number_format($payment->amount, 2) }}</td>
+-                            <td class="px-4 py-3 text-slate-600">{{ $payment->due_date->format('M j, Y') }}</td>
+-                            <td class="px-4 py-3 text-slate-600">{{ $payment->payment_date?->format('M j, Y') ?? '—' }}</td>
+-                            <td class="px-4 py-3">
+-                                <span class="text-xs px-2 py-1 rounded-full
+-                                    {{ match($payment->status) {
+-                                        'paid' => 'bg-green-50 text-green-700',
+-                                        'overdue', 'failed' => 'bg-red-50 text-red-700',
+-                                        default => 'bg-amber-50 text-amber-700',
+-                                    } }}">
+-                                    {{ str($payment->status)->title() }}
+-                                </span>
+-                            </td>
+-                        </tr>
+-                    @endforeach
+-                </tbody>
+-            </table>
++        <div class="space-y-8">
++            @foreach ($groups as $group)
++                @continue($group['items']->isEmpty())
++                <section>
++                    <div class="flex items-center gap-2 mb-3">
++                        <h2 class="text-sm font-semibold text-slate-700">{{ $group['title'] }}</h2>
++                        <span class="text-xs text-slate-400">({{ $group['items']->count() }})</span>
++                    </div>
++                    @if ($group['hint'])
++                        <p class="text-xs text-slate-500 mb-3">{{ $group['hint'] }}</p>
++                    @endif
++
++                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
++                        <table class="w-full text-sm">
++                            <thead class="bg-slate-50 text-slate-500 text-left">
++                                <tr>
++                                    <th class="px-4 py-3">Property</th>
++                                    <th class="px-4 py-3">Amount</th>
++                                    <th class="px-4 py-3">Due date</th>
++                                    <th class="px-4 py-3">Status</th>
++                                    <th class="px-4 py-3"></th>
++                                </tr>
++                            </thead>
++                            <tbody class="divide-y divide-slate-100">
++                                @foreach ($group['items'] as $payment)
++                                    <tr>
++                                        <td class="px-4 py-3 font-medium text-slate-900">{{ $payment->contract->property->name }}</td>
++                                        <td class="px-4 py-3 text-slate-600">₱{{ number_format($payment->amount, 2) }}</td>
++                                        <td class="px-4 py-3 text-slate-600">{{ $payment->due_date->format('M j, Y') }}</td>
++                                        <td class="px-4 py-3">@include('partials.payment-status-badge', ['payment' => $payment])</td>
++                                        <td class="px-4 py-3 text-right">
++                                            <a href="{{ route('tenant.payments.show', $payment) }}" class="text-sm text-blue-600 hover:underline">
++                                                {{ $payment->canBeSubmittedByTenant() ? 'Pay now' : 'View' }}
++                                            </a>
++                                        </td>
++                                    </tr>
++                                @endforeach
++                            </tbody>
++                        </table>
++                    </div>
++                </section>
++            @endforeach
+         </div>
+-        <div class="mt-6">{{ $payments->links() }}</div>
+     @endif
+ @endsection
+diff --git a/resources/views/tenant/payments/show.blade.php b/resources/views/tenant/payments/show.blade.php
+new file mode 100644
+index 0000000..392c7f9
+--- /dev/null
++++ b/resources/views/tenant/payments/show.blade.php
+@@ -0,0 +1,129 @@
++@extends('layouts.app')
++
++@section('title', 'Payment Details')
++
++@section('content')
++    <a href="{{ route('tenant.payments.index') }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>My Payments</span></a>
++
++    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
++        <div class="lg:col-span-2 space-y-6">
++            <div class="bg-white border border-slate-200 rounded-xl p-6">
++                <div class="flex items-center justify-between mb-4">
++                    <h1 class="text-lg font-semibold text-slate-900">{{ $payment->contract->property->name }}</h1>
++                    @include('partials.payment-status-badge', ['payment' => $payment])
++                </div>
++
++                <dl class="grid grid-cols-2 gap-y-2 text-sm">
++                    <dt class="text-slate-500">Amount due</dt><dd class="text-slate-900 font-medium">₱{{ number_format($payment->amount, 2) }}</dd>
++                    <dt class="text-slate-500">Due date</dt><dd class="text-slate-900">{{ $payment->due_date->format('M j, Y') }}</dd>
++                    @if ($payment->payment_date)
++                        <dt class="text-slate-500">Payment date</dt><dd class="text-slate-900">{{ $payment->payment_date->format('M j, Y') }}</dd>
++                    @endif
++                    @if ($payment->payment_method)
++                        <dt class="text-slate-500">Method</dt><dd class="text-slate-900">{{ str($payment->payment_method)->title() }}</dd>
++                    @endif
++                    @if ($payment->reference_number)
++                        <dt class="text-slate-500">Reference #</dt><dd class="text-slate-900">{{ $payment->reference_number }}</dd>
++                    @endif
++                </dl>
++
++                @if ($payment->proof_path)
++                    <div class="mt-4 pt-4 border-t border-slate-100">
++                        <a href="{{ route('payments.proof.download', $payment) }}" class="text-sm text-blue-600 hover:underline">
++                            View submitted proof of payment
++                        </a>
++                    </div>
++                @endif
++
++                @if ($payment->status === 'paid')
++                    <div class="mt-4 pt-4 border-t border-slate-100">
++                        <a href="{{ route('tenant.payments.receipt', $payment) }}" class="text-sm text-blue-600 hover:underline">Download receipt (PDF)</a>
++                    </div>
++                @endif
++            </div>
++
++            @if (in_array($payment->status, ['failed', 'pending']) && $payment->review_reason)
++                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
++                    <p class="font-medium mb-1">{{ $payment->status === 'failed' ? 'Payment rejected' : 'Correction needed' }}</p>
++                    <p>{{ $payment->review_reason }}</p>
++                </div>
++            @endif
++
++            @if ($payment->canBeSubmittedByTenant())
++                <div class="bg-white border border-slate-200 rounded-xl p-6">
++                    <h2 class="text-sm font-semibold text-slate-700 mb-4">Submit this payment</h2>
++
++                    @include('partials.validation-errors')
++
++                    <form method="POST" action="{{ route('tenant.payments.submit', $payment) }}" enctype="multipart/form-data" class="space-y-4">
++                        @csrf
++
++                        <div>
++                            <label class="block text-xs font-medium text-slate-500 mb-1">Amount</label>
++                            <input type="text" value="₱{{ number_format($payment->amount, 2) }}" disabled
++                                   class="w-full rounded-lg border-slate-300 bg-slate-50 text-slate-500">
++                            <input type="hidden" name="amount" value="{{ $payment->amount }}">
++                            <p class="text-xs text-slate-400 mt-1">This is the exact amount due — partial payments aren't supported yet.</p>
++                        </div>
++
++                        <div>
++                            <label class="block text-xs font-medium text-slate-500 mb-1">Payment method</label>
++                            <select name="payment_method" required class="w-full rounded-lg border-slate-300">
++                                <option value="">Select method</option>
++                                <option value="cash" @selected(old('payment_method') === 'cash')>Cash</option>
++                                <option value="gcash" @selected(old('payment_method') === 'gcash')>GCash</option>
++                                <option value="bank_transfer" @selected(old('payment_method') === 'bank_transfer')>Bank Transfer</option>
++                                <option value="other" @selected(old('payment_method') === 'other')>Other</option>
++                            </select>
++                        </div>
++
++                        <div>
++                            <label class="block text-xs font-medium text-slate-500 mb-1">Payment date</label>
++                            <input type="date" name="payment_date" required max="{{ now()->toDateString() }}"
++                                   value="{{ old('payment_date', now()->toDateString()) }}" class="w-full rounded-lg border-slate-300">
++                        </div>
++
++                        <div>
++                            <label class="block text-xs font-medium text-slate-500 mb-1">Reference number</label>
++                            <input type="text" name="reference_number" required maxlength="100" value="{{ old('reference_number') }}"
++                                   placeholder="e.g. GCash transaction ID" class="w-full rounded-lg border-slate-300">
++                        </div>
++
++                        <div>
++                            <label class="block text-xs font-medium text-slate-500 mb-1">Proof of payment (optional)</label>
++                            <input type="file" name="proof" accept=".jpg,.jpeg,.png,.pdf" class="w-full text-sm">
++                            <p class="text-xs text-slate-400 mt-1">JPG, PNG, or PDF — up to 5MB.</p>
++                        </div>
++
++                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 text-sm font-medium min-h-[44px]">
++                            Submit payment for review
++                        </button>
++                    </form>
++                </div>
++            @endif
++        </div>
++
++        <div class="bg-white border border-slate-200 rounded-xl p-6">
++            <p class="text-sm font-medium text-slate-700 mb-3">Activity</p>
++            @if ($payment->statusHistories->isEmpty())
++                <p class="text-xs text-slate-400">No activity yet.</p>
++            @else
++                <ul class="text-xs space-y-3">
++                    @foreach ($payment->statusHistories as $history)
++                        <li class="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
++                            <p class="text-slate-900 font-medium">{{ str($history->to_status)->title() }}</p>
++                            <p class="text-slate-500">{{ $history->created_at->format('M j, Y g:i A') }}
++                                @if ($history->actor)
++                                    &middot; {{ $history->actor->first_name }} {{ $history->actor->last_name }}
++                                @endif
++                            </p>
++                            @if ($history->reason)
++                                <p class="text-slate-500 mt-1">{{ $history->reason }}</p>
++                            @endif
++                        </li>
++                    @endforeach
++                </ul>
++            @endif
++        </div>
++    </div>
++@endsection
+diff --git a/routes/web.php b/routes/web.php
+index 68dbfc1..740debd 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -11,6 +11,7 @@
+ use App\Http\Controllers\Owner\OwnerVerificationController;
+ use App\Http\Controllers\Owner\PaymentController as OwnerPaymentController;
+ use App\Http\Controllers\Owner\PropertyController as OwnerPropertyController;
++use App\Http\Controllers\PaymentDocumentController;
+ use App\Http\Controllers\Owner\PropertyImageController;
+ use App\Http\Controllers\Owner\RentalApplicationController as OwnerRentalApplicationController;
+ use App\Http\Controllers\Owner\RentalContractController as OwnerRentalContractController;
+@@ -107,6 +108,12 @@
+         // Payments (recorded against a contract)
+         Route::post('contracts/{contract}/payments', [OwnerPaymentController::class, 'store'])->name('contracts.payments.store');
+ 
++        // Tenant-submitted payment review queue
++        Route::get('payments', [OwnerPaymentController::class, 'index'])->name('payments.index');
++        Route::get('payments/{payment}', [OwnerPaymentController::class, 'show'])->name('payments.show');
++        Route::patch('payments/{payment}/review', [OwnerPaymentController::class, 'review'])->name('payments.review');
++        Route::get('payments/{payment}/receipt', [OwnerPaymentController::class, 'receipt'])->name('payments.receipt');
++
+         // Maintenance requests for owned/managed properties
+         Route::get('maintenance', [OwnerMaintenanceRequestController::class, 'index'])->name('maintenance.index');
+         Route::patch('maintenance/{maintenanceRequest}', [OwnerMaintenanceRequestController::class, 'updateStatus'])->name('maintenance.update');
+@@ -130,6 +137,9 @@
+         Route::post('contracts/{contract}/review', [TenantReviewController::class, 'store'])->name('contracts.review.store');
+ 
+         Route::get('payments', [TenantPaymentController::class, 'index'])->name('payments.index');
++        Route::get('payments/{payment}', [TenantPaymentController::class, 'show'])->name('payments.show');
++        Route::post('payments/{payment}/submit', [TenantPaymentController::class, 'store'])->name('payments.submit');
++        Route::get('payments/{payment}/receipt', [TenantPaymentController::class, 'receipt'])->name('payments.receipt');
+ 
+         Route::get('maintenance', [TenantMaintenanceRequestController::class, 'index'])->name('maintenance.index');
+         Route::get('contracts/{contract}/maintenance/create', [TenantMaintenanceRequestController::class, 'create'])->name('maintenance.create');
+@@ -147,6 +157,7 @@
+     // Private document download — authorized per-request, never a public URL
+     Route::get('documents/{document}/download', [ApplicationDocumentController::class, 'download'])->name('documents.download');
+     Route::get('documents/verification/{document}/download', [VerificationDocumentController::class, 'download'])->name('verification-documents.download');
++    Route::get('payments/{payment}/proof', [PaymentDocumentController::class, 'download'])->name('payments.proof.download');
+ 
+     // Owner verification — deliberately OUTSIDE the 'owner.verified' gate above,
+     // since an unverified owner must still be able to reach this page.

@@ -3,7 +3,7 @@
 @section('title', 'Application — '.$application->property->name)
 
 @section('content')
-    <a href="{{ route('tenant.applications.index') }}" class="text-sm text-blue-600 hover:underline">&larr; My Applications</a>
+    <a href="{{ route('tenant.applications.index') }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>My Applications</span></a>
 
     <div class="bg-white border border-slate-200 rounded-xl p-6 mt-4 max-w-2xl">
         <div class="flex items-center justify-between mb-4">

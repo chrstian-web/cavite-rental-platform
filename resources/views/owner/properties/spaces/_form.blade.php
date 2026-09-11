@@ -82,11 +82,6 @@
                 <input type="text" name="attributes[floor]" value="{{ old('attributes.floor', $space->attributes['floor'] ?? '') }}"
                     class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
             </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Unit type</label>
-                <input type="text" name="attributes[unit_type]" value="{{ old('attributes.unit_type', $space->attributes['unit_type'] ?? '') }}"
-                    placeholder="e.g. Studio, 1-Bedroom" class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
-            </div>
         </div>
 
         <div x-show="propertyType === 'boarding_house'">

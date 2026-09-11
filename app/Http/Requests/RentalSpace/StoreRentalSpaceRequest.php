@@ -3,6 +3,7 @@
 namespace App\Http\Requests\RentalSpace;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreRentalSpaceRequest extends FormRequest
 {
@@ -15,7 +16,14 @@ class StoreRentalSpaceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'space_number' => ['required', 'string', 'max:50'],
+            'space_number' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('rental_spaces')->where(function ($query) {
+                    return $query->where('property_id', $this->route('property')->id);
+                }),
+            ],
             'space_type' => ['nullable', 'string', 'max:100'],
             'bedrooms' => ['required', 'integer', 'min:0', 'max:20'],
             'bathrooms' => ['required', 'integer', 'min:0', 'max:20'],

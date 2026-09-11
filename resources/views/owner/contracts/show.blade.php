@@ -3,7 +3,7 @@
 @section('title', 'Contract — '.$contract->property->name)
 
 @section('content')
-    <a href="{{ route('owner.contracts.index') }}" class="text-sm text-blue-600 hover:underline">&larr; Contracts</a>
+    <a href="{{ route('owner.contracts.index') }}" class="back-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg><span>Contracts</span></a>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <div class="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-6">
@@ -46,7 +46,10 @@
         </div>
 
         <div class="bg-white border border-slate-200 rounded-xl p-6">
-            <p class="text-sm font-medium text-slate-700 mb-3">Payments</p>
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-medium text-slate-700">Payments</p>
+                <a href="{{ route('owner.payments.index') }}" class="text-xs text-blue-600 hover:underline">Review queue</a>
+            </div>
 
             @if ($contract->status === 'active')
                 <form method="POST" action="{{ route('owner.contracts.payments.store', $contract) }}" class="space-y-2 mb-4 text-xs">
@@ -78,11 +81,14 @@
                 <ul class="text-xs space-y-2">
                     @foreach ($contract->payments as $payment)
                         <li class="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <span>₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j') }}</span>
+                            <a href="{{ route('owner.payments.show', $payment) }}" class="hover:underline">
+                                ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j') }}
+                            </a>
                             <span class="px-2 py-0.5 rounded-full
                                 {{ match($payment->status) {
                                     'paid' => 'bg-green-50 text-green-700',
                                     'overdue', 'failed' => 'bg-red-50 text-red-700',
+                                    'submitted' => 'bg-blue-50 text-blue-700',
                                     default => 'bg-amber-50 text-amber-700',
                                 } }}">
                                 {{ str($payment->status)->title() }}
