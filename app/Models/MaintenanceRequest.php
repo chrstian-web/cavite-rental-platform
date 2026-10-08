@@ -20,12 +20,12 @@ class MaintenanceRequest extends Model
 
     public function property(): BelongsTo
     {
-        return $this->belongsTo(Property::class);
+        return $this->belongsTo(Property::class)->withTrashed();
     }
 
     public function rentalSpace(): BelongsTo
     {
-        return $this->belongsTo(RentalSpace::class);
+        return $this->belongsTo(RentalSpace::class)->withTrashed();
     }
 
     public function images(): HasMany

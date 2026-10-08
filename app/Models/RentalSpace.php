@@ -60,4 +60,30 @@ class RentalSpace extends Model
     {
         return $query->where('status', 'available');
     }
+
+    /**
+     * A unit counts as occupied when it is flagged occupied, has any occupied
+     * capacity, or has an active contract. Checking all three keeps the dashboard
+     * correct even if the status column was never flipped (partly-filled dorm
+     * rooms, older data, a status edited by hand).
+     */
+    public function scopeOccupied($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('status', 'occupied')
+                ->orWhere('occupied_capacity', '>', 0)
+                ->orWhereHas('rentalContracts', fn ($c) => $c->where('status', 'active'));
+        });
+    }
+
+    /**
+     * Units a tenant can still take: marked available, with room left, and not
+     * fully covered by active contracts.
+     */
+    public function scopeOpenForRent($query)
+    {
+        return $query->where('status', 'available')
+            ->whereColumn('occupied_capacity', '<', 'total_capacity')
+            ->whereRaw('(select count(*) from rental_contracts where rental_contracts.rental_space_id = rental_spaces.id and rental_contracts.status = ?) < rental_spaces.total_capacity', ['active']);
+    }
 }

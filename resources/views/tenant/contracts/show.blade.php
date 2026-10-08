@@ -22,8 +22,34 @@
         <dl class="grid grid-cols-2 gap-y-2 text-sm">
             <dt class="text-slate-500">Monthly rent</dt><dd class="text-slate-900">₱{{ number_format($contract->monthly_rent, 2) }}</dd>
             <dt class="text-slate-500">Security deposit</dt><dd class="text-slate-900">₱{{ number_format($contract->security_deposit, 2) }}</dd>
+            <dt class="text-slate-500">Advance payment</dt><dd class="text-slate-900">₱{{ number_format($contract->advance_payment, 2) }}</dd>
             <dt class="text-slate-500">Lease term</dt><dd class="text-slate-900">{{ $contract->start_date->format('M j, Y') }} – {{ $contract->end_date->format('M j, Y') }}</dd>
         </dl>
+
+        @if ($contract->status === 'draft')
+            @php
+                $unpaidTypes = $contract->unpaidDownPaymentTypes();
+                $toPay = $contract->payments
+                    ->whereIn('payment_type', \App\Models\Payment::DOWN_PAYMENT_TYPES)
+                    ->where('status', 'pending');
+            @endphp
+            <div class="mt-4 rounded-lg border px-4 py-3 text-sm {{ $unpaidTypes === [] ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
+                @if ($unpaidTypes === [])
+                    Your down payment is complete. The owner will activate your contract and hand over the unit.
+                @else
+                    <p class="font-medium">Pay your down payment to confirm your move-in</p>
+                    <p class="mt-1 text-xs">The unit is handed over only after the owner approves your security deposit and advance payment.</p>
+                    @foreach ($toPay as $due)
+                        <a href="{{ route('tenant.payments.show', $due) }}" class="mt-2 block text-blue-700 hover:underline">
+                            Pay {{ $due->typeLabel() }} — ₱{{ number_format($due->amount, 2) }} (due {{ $due->due_date->format('M j, Y') }})
+                        </a>
+                    @endforeach
+                    @foreach ($contract->payments->whereIn('payment_type', \App\Models\Payment::DOWN_PAYMENT_TYPES)->where('status', 'submitted') as $waiting)
+                        <p class="mt-2 text-xs">{{ $waiting->typeLabel() }} submitted — waiting for the owner to approve.</p>
+                    @endforeach
+                @endif
+            </div>
+        @endif
 
         <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-3">
             <a href="{{ route('tenant.contracts.pdf', $contract) }}" class="text-sm text-blue-600 hover:underline">Download PDF</a>
@@ -42,7 +68,7 @@
                     @foreach ($contract->payments as $payment)
                         <li class="flex items-center justify-between">
                             <a href="{{ route('tenant.payments.show', $payment) }}" class="hover:underline">
-                                ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j, Y') }}
+                                {{ $payment->typeLabel() }} — ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j, Y') }}
                             </a>
                             <span class="text-xs px-2 py-0.5 rounded-full
                                 {{ match($payment->status) {

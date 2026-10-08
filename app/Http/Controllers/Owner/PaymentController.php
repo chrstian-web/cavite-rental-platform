@@ -77,6 +77,21 @@ class PaymentController extends Controller
             ->with('status', 'Payment reviewed.');
     }
 
+    public function markReceived(Request $request, Payment $payment): RedirectResponse
+    {
+        $this->authorize('markReceived', $payment);
+
+        $data = $request->validate([
+            'payment_method' => ['required', 'in:cash,gcash,bank_transfer,other'],
+            'reference_number' => ['nullable', 'string', 'max:100'],
+            'payment_date' => ['required', 'date', 'before_or_equal:today'],
+        ]);
+
+        $this->payments->markReceived($payment, $request->user(), $data);
+
+        return back()->with('status', $payment->typeLabel().' marked as received.');
+    }
+
     public function receipt(Payment $payment)
     {
         $this->authorize('view', $payment);

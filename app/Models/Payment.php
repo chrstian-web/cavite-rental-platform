@@ -17,11 +17,20 @@ class Payment extends Model
      */
     public const STATUSES = ['pending', 'submitted', 'paid', 'overdue', 'failed'];
 
+    public const TYPE_MONTHLY_RENT = 'monthly_rent';
+    public const TYPE_SECURITY_DEPOSIT = 'security_deposit';
+    public const TYPE_ADVANCE_PAYMENT = 'advance_payment';
+
+    /** Payments that must be settled before a contract can be activated (move-in). */
+    public const DOWN_PAYMENT_TYPES = [self::TYPE_SECURITY_DEPOSIT, self::TYPE_ADVANCE_PAYMENT];
+
     protected $fillable = [
-        'rental_contract_id', 'user_id', 'amount', 'due_date', 'payment_date',
+        'rental_contract_id', 'user_id', 'payment_type', 'amount', 'currency', 'due_date', 'payment_date',
         'payment_method', 'reference_number', 'status', 'notes',
         'proof_path', 'proof_original_filename', 'submitted_at',
         'reviewed_by', 'reviewed_at', 'review_reason',
+        'payment_source', 'gateway', 'gateway_payment_id', 'gateway_checkout_id', 'gateway_reference',
+        'metadata', 'paid_at', 'failed_at', 'receipt_number',
     ];
 
     protected function casts(): array
@@ -32,6 +41,9 @@ class Payment extends Model
             'payment_date' => 'date',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'paid_at' => 'datetime',
+            'failed_at' => 'datetime',
+            'metadata' => 'array',
         ];
     }
 
@@ -64,6 +76,21 @@ class Payment extends Model
     {
         return in_array($this->status, ['pending', 'overdue'], true)
             && $this->due_date->isPast();
+    }
+
+    public function isOnline(): bool
+    {
+        return $this->payment_source === 'online';
+    }
+
+    public function isDownPayment(): bool
+    {
+        return in_array($this->payment_type, self::DOWN_PAYMENT_TYPES, true);
+    }
+
+    public function typeLabel(): string
+    {
+        return (string) str($this->payment_type ?: self::TYPE_MONTHLY_RENT)->replace('_', ' ')->title();
     }
 
     public function canBeSubmittedByTenant(): bool

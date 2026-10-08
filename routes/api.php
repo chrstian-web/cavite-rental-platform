@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\RecommendationController;
 use App\Http\Controllers\Api\V1\RentalApplicationController;
 use App\Http\Controllers\Api\V1\RentalContractController;
 use App\Http\Controllers\Api\V1\ViewingRequestController;
+use App\Http\Controllers\Webhooks\PaymongoWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\Route;
  * Consumable by Flutter, React Native, native Android, and native iOS —
  * nothing in this file is web-session-specific.
  */
+// Called by PayMongo's servers (no login, no CSRF); authenticity is proven by the signature header.
+Route::post('webhooks/paymongo', PaymongoWebhookController::class);
+
 Route::prefix('v1')->group(function () {
 
     // ── Public ───────────────────────────────────────────────────

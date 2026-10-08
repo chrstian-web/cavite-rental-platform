@@ -14,6 +14,10 @@
                 </div>
 
                 <dl class="grid grid-cols-2 gap-y-2 text-sm">
+                    <dt class="text-slate-500">Payment type</dt><dd class="text-slate-900">{{ $payment->typeLabel() }}</dd>
+                    @if ($payment->isOnline())
+                        <dt class="text-slate-500">Paid via</dt><dd class="text-slate-900">Online ({{ ucfirst((string) $payment->gateway) }}){{ $payment->receipt_number ? ' · '.$payment->receipt_number : '' }}</dd>
+                    @endif
                     <dt class="text-slate-500">Amount due</dt><dd class="text-slate-900 font-medium">₱{{ number_format($payment->amount, 2) }}</dd>
                     <dt class="text-slate-500">Due date</dt><dd class="text-slate-900">{{ $payment->due_date->format('M j, Y') }}</dd>
                     @if ($payment->payment_date)
@@ -49,13 +53,39 @@
                 </div>
             @endif
 
+            @if (request('checkout') === 'success' && $payment->status !== 'paid')
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                    Thanks! We're waiting for the payment provider to confirm your payment. Refresh this page in a few seconds.
+                </div>
+            @elseif (request('checkout') === 'cancelled')
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                    Online payment was cancelled. Nothing was charged.
+                </div>
+            @endif
+
             @if ($payment->canBeSubmittedByTenant())
                 <div class="bg-white border border-slate-200 rounded-xl p-6">
-                    <h2 class="text-sm font-semibold text-slate-700 mb-4">Submit this payment</h2>
+                    <h2 class="text-sm font-semibold text-slate-700 mb-1">Pay online</h2>
+                    <p class="text-xs text-slate-500 mb-4">
+                        Pay instantly with GCash, card or QR Ph. It is confirmed automatically, so no proof of payment is needed.
+                        @if (config('services.payment_gateway', 'fake') !== 'paymongo')
+                            <span class="font-medium text-amber-700">(Test mode: no real money is charged.)</span>
+                        @endif
+                    </p>
+                    <form method="POST" action="{{ route('tenant.payments.pay-online', $payment) }}">
+                        @csrf
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 text-sm font-medium">
+                            Pay ₱{{ number_format($payment->amount, 2) }} online
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white border border-slate-200 rounded-xl p-6">
+                    <h2 class="text-sm font-semibold text-slate-700 mb-4">Or submit a payment you already made</h2>
 
                     @include('partials.validation-errors')
 
-                    <form method="POST" action="{{ route('tenant.payments.submit', $payment) }}" enctype="multipart/form-data" class="space-y-4">
+                    <form method="POST" action="{{ route('tenant.payments.store', $payment) }}" enctype="multipart/form-data" class="space-y-4">
                         @csrf
 
                         <div>

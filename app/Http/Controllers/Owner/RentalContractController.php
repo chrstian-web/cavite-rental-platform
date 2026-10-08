@@ -49,12 +49,17 @@ class RentalContractController extends Controller
 
         return redirect()
             ->route('owner.contracts.show', $contract)
-            ->with('status', 'Contract created as a draft. Activate it once both parties are ready.');
+            ->with('status', 'Contract created as a draft. The tenant must pay the down payment before you can activate it.');
     }
 
     public function show(RentalContract $contract): View
     {
         $this->authorize('view', $contract);
+
+        // Older drafts may predate the down payment requirement; this only creates what is missing.
+        if ($contract->status === 'draft') {
+            $this->contracts->ensureDownPayments($contract);
+        }
 
         $contract->load(['tenant', 'property', 'rentalSpace', 'payments']);
 
@@ -65,6 +70,10 @@ class RentalContractController extends Controller
     {
         $this->authorize('view', $contract);
         abort_unless($contract->status === 'draft', 422, 'Only a draft contract can be activated.');
+
+        if (! $contract->hasSettledDownPayments()) {
+            return back()->withErrors(['activate' => $contract->downPaymentBlockedMessage()]);
+        }
 
         $this->contracts->activate($contract);
 

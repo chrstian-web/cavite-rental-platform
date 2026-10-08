@@ -33,6 +33,18 @@ class PaymentPolicy
     }
 
     /**
+     * Owner/manager/super admin recording a payment received in person.
+     */
+    public function markReceived(User $user, Payment $payment): bool
+    {
+        if ($user->isTenant() || ! in_array($payment->status, ['pending', 'overdue'], true)) {
+            return false;
+        }
+
+        return $this->view($user, $payment);
+    }
+
+    /**
      * Owner/manager/super admin reviewing a tenant's submitted payment.
      */
     public function review(User $user, Payment $payment): bool

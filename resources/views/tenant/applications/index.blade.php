@@ -38,8 +38,11 @@
                                     {{ str($application->status)->replace('_', ' ')->title() }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-right">
-                                <a href="{{ route('tenant.applications.show', $application) }}" class="text-blue-600 hover:underline">View</a>
+                            <td class="px-4 py-3 font-medium text-slate-900">
+                                {{ $application->property->name }}
+                                @if ($application->property->trashed())
+                                    <span class="text-xs text-slate-400">(no longer listed)</span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

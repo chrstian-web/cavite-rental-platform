@@ -38,5 +38,8 @@ Route::middleware('auth')->group(function () {
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])->name('password.confirm');
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
+
+// Logout is outside the auth group on purpose: if the session already expired,
+// the person should still land on the home page, not be bounced to the login screen.
+Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Property;
+use App\Models\RentalContract;
 use App\Models\User;
 use App\Notifications\NewPropertySubmittedNotification;
 use Illuminate\Http\UploadedFile;
@@ -59,6 +60,10 @@ class PropertyService
     public function delete(Property $property): void
     {
         DB::transaction(function () use ($property) {
+            RentalContract::where('property_id', $property->id)
+                ->where('status', 'active')
+                ->update(['status' => 'terminated']);
+
             foreach ($property->images as $image) {
                 Storage::disk('public')->delete($image->path);
             }

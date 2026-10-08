@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RentalSpace\StoreRentalSpaceRequest;
 use App\Http\Requests\RentalSpace\UpdateRentalSpaceRequest;
 use App\Models\Property;
+use App\Models\RentalContract;
 use App\Models\RentalSpace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
@@ -77,6 +78,10 @@ class RentalSpaceController extends Controller
     {
         $this->authorize('update', $property);
         abort_unless($space->property_id === $property->id, 404);
+
+        RentalContract::where('rental_space_id', $space->id)
+            ->where('status', 'active')
+            ->update(['status' => 'terminated']);
 
         foreach ($space->images as $image) {
             Storage::disk('public')->delete($image->path);

@@ -112,9 +112,8 @@
                                 <details class="mt-3">
                                     <summary class="text-xs text-blue-600 cursor-pointer">+ Add hotspot (link to another scene)</summary>
                                     <p class="text-xs text-slate-400 mt-2">
-                                        Tip: for a floor-level arrow (like Street View), use a Pitch around
-                                        <strong>-40 to -60</strong>. Yaw 0 points forward from where the photo was taken;
-                                        try -90/90 for left/right, 180 for behind.
+                                        Click <strong>Place arrow on preview</strong>, then click the panorama where the
+                                        arrow should appear. You can drag the panorama first to find the correct view.
                                     </p>
                                     <form action="{{ route('owner.properties.tour.hotspots.store', [$property, $tour, $scene]) }}" method="POST"
                                           class="grid grid-cols-2 gap-2 mt-2">
@@ -129,10 +128,14 @@
                                         </select>
                                         <input type="text" name="label" placeholder="Label (e.g. To Kitchen)" class="rounded-lg border-slate-300 text-xs">
                                         <input type="hidden" name="type" value="navigation">
-                                        <input type="number" step="0.01" name="position_x" placeholder="Yaw (-180 to 180)" required
+                                        <input id="hotspot-yaw-{{ $scene->id }}" type="number" step="0.01" name="position_x" placeholder="Yaw (-180 to 180)" required
                                             class="rounded-lg border-slate-300 text-xs">
-                                        <input type="number" step="0.01" name="position_y" placeholder="Pitch, e.g. -50 for floor" required
+                                        <input id="hotspot-pitch-{{ $scene->id }}" type="number" step="0.01" name="position_y" placeholder="Pitch, e.g. -50 for floor" required
                                             class="rounded-lg border-slate-300 text-xs">
+                                        <button type="button" data-place-hotspot="{{ $scene->id }}"
+                                            class="col-span-2 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs rounded-lg py-1.5">
+                                            Place arrow on preview
+                                        </button>
                                         <button type="submit" class="col-span-2 bg-slate-800 hover:bg-slate-900 text-white text-xs rounded-lg py-1.5">
                                             Add hotspot
                                         </button>
@@ -160,3 +163,58 @@
         </div>
     @endif
 @endsection
+
+@if ($tour && $tour->scenes->isNotEmpty())
+    @push('scripts')
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const viewer = window['ownerTour_getInlineViewer'] && window['ownerTour_getInlineViewer']();
+            if (!viewer) return;
+
+            let placementSceneId = null;
+            let placementHotspotId = null;
+            const preview = document.getElementById('ownerTour-inline');
+            const buttons = document.querySelectorAll('[data-place-hotspot]');
+
+            function setPlacementMode(sceneId, button) {
+                placementSceneId = String(sceneId);
+                if (typeof viewer.loadScene === 'function') viewer.loadScene('scene-' + placementSceneId);
+                buttons.forEach(item => item.classList.remove('ring-2', 'ring-blue-500'));
+                button.classList.add('ring-2', 'ring-blue-500');
+                preview.classList.add('ring-4', 'ring-blue-200');
+                button.textContent = 'Now click the panorama to place the arrow';
+            }
+
+            function placeMarker(pitch, yaw) {
+                if (placementHotspotId) viewer.removeHotSpot(placementHotspotId);
+                placementHotspotId = 'owner-placement-marker';
+                viewer.addHotSpot({
+                    id: placementHotspotId,
+                    pitch: pitch,
+                    yaw: yaw,
+                    type: 'custom',
+                    cssClass: 'tour-placement-marker',
+                    text: 'Selected hotspot position'
+                });
+            }
+
+            buttons.forEach(button => button.addEventListener('click', function () {
+                setPlacementMode(this.dataset.placeHotspot, this);
+            }));
+
+            preview.addEventListener('click', function (event) {
+                if (!placementSceneId || !viewer || typeof viewer.mouse2coord !== 'function') return;
+                const coords = viewer.mouse2coord(event);
+                if (!coords) return;
+                const yaw = Math.max(-180, Math.min(180, Number(coords[1] ?? coords.yaw ?? 0)));
+                const pitch = Math.max(-90, Math.min(90, Number(coords[0] ?? coords.pitch ?? 0)));
+                document.getElementById('hotspot-yaw-' + placementSceneId).value = yaw.toFixed(2);
+                document.getElementById('hotspot-pitch-' + placementSceneId).value = pitch.toFixed(2);
+                placeMarker(pitch, yaw);
+                const activeButton = document.querySelector('[data-place-hotspot="' + placementSceneId + '"]');
+                if (activeButton) activeButton.textContent = 'Arrow placed — click again to reposition';
+            });
+        });
+        </script>
+    @endpush
+@endif

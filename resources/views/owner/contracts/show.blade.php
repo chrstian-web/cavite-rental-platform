@@ -28,13 +28,32 @@
                 <dt class="text-slate-500">Lease term</dt><dd class="text-slate-900">{{ $contract->start_date->format('M j, Y') }} – {{ $contract->end_date->format('M j, Y') }}</dd>
             </dl>
 
+            @php
+                $downPaymentSettled = $contract->hasSettledDownPayments();
+            @endphp
+
+            @if ($contract->status === 'draft')
+                <div class="mt-4 rounded-lg border px-4 py-3 text-sm {{ $downPaymentSettled ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
+                    @if ($downPaymentSettled)
+                        Down payment received. You can activate this contract and hand over the unit.
+                    @else
+                        <p class="font-medium">Waiting for the down payment</p>
+                        <p class="mt-1 text-xs">The tenant must pay the security deposit and advance payment before move-in. You can activate the contract once both are marked paid.</p>
+                    @endif
+                </div>
+            @endif
+
             <div class="mt-4 pt-4 border-t border-slate-100 flex gap-3">
                 <a href="{{ route('owner.contracts.pdf', $contract) }}" class="text-sm text-blue-600 hover:underline">Download PDF</a>
                 @if ($contract->status === 'draft')
-                    <form method="POST" action="{{ route('owner.contracts.activate', $contract) }}">
-                        @csrf @method('PATCH')
-                        <button class="text-sm text-green-600 hover:underline">Activate contract</button>
-                    </form>
+                    @if ($downPaymentSettled)
+                        <form method="POST" action="{{ route('owner.contracts.activate', $contract) }}">
+                            @csrf @method('PATCH')
+                            <button class="text-sm text-green-600 hover:underline">Activate contract</button>
+                        </form>
+                    @else
+                        <span class="text-sm text-slate-400 cursor-not-allowed" title="Available once the down payment is paid">Activate contract (locked)</span>
+                    @endif
                 @elseif ($contract->status === 'active')
                     <form method="POST" action="{{ route('owner.contracts.terminate', $contract) }}"
                           onsubmit="return confirm('Terminate this contract? This frees up the unit.')">
@@ -80,19 +99,40 @@
             @else
                 <ul class="text-xs space-y-2">
                     @foreach ($contract->payments as $payment)
-                        <li class="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <a href="{{ route('owner.payments.show', $payment) }}" class="hover:underline">
-                                ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j') }}
-                            </a>
-                            <span class="px-2 py-0.5 rounded-full
-                                {{ match($payment->status) {
-                                    'paid' => 'bg-green-50 text-green-700',
-                                    'overdue', 'failed' => 'bg-red-50 text-red-700',
-                                    'submitted' => 'bg-blue-50 text-blue-700',
-                                    default => 'bg-amber-50 text-amber-700',
-                                } }}">
-                                {{ str($payment->status)->title() }}
-                            </span>
+                        <li class="border-b border-slate-100 pb-2">
+                            <div class="flex items-center justify-between">
+                                <a href="{{ route('owner.payments.show', $payment) }}" class="hover:underline">
+                                    <span class="font-medium">{{ $payment->typeLabel() }}</span><br>
+                                    ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j') }}
+                                </a>
+                                <span class="px-2 py-0.5 rounded-full
+                                    {{ match($payment->status) {
+                                        'paid' => 'bg-green-50 text-green-700',
+                                        'overdue', 'failed' => 'bg-red-50 text-red-700',
+                                        'submitted' => 'bg-blue-50 text-blue-700',
+                                        default => 'bg-amber-50 text-amber-700',
+                                    } }}">
+                                    {{ str($payment->status)->title() }}
+                                </span>
+                            </div>
+
+                            @can('markReceived', $payment)
+                                <details class="mt-2">
+                                    <summary class="cursor-pointer text-blue-600 hover:underline">Mark as received (paid in person)</summary>
+                                    <form method="POST" action="{{ route('owner.payments.received', $payment) }}" class="space-y-2 mt-2">
+                                        @csrf @method('PATCH')
+                                        <select name="payment_method" required class="w-full rounded-lg border-slate-300">
+                                            <option value="cash">Cash</option>
+                                            <option value="gcash">GCash</option>
+                                            <option value="bank_transfer">Bank Transfer</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                        <input type="text" name="reference_number" placeholder="Reference # (optional)" class="w-full rounded-lg border-slate-300">
+                                        <input type="date" name="payment_date" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required class="w-full rounded-lg border-slate-300">
+                                        <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white rounded-lg py-1.5">Confirm received</button>
+                                    </form>
+                                </details>
+                            @endcan
                         </li>
                     @endforeach
                 </ul>

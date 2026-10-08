@@ -23,7 +23,7 @@
                     @foreach ($viewings as $viewing)
                         <tr>
                             <td class="px-4 py-3 font-medium text-slate-900">{{ $viewing->user->first_name }} {{ $viewing->user->last_name }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ $viewing->property->name }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ $viewing->property->name ?? 'Property unavailable' }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $viewing->preferred_date->format('M j, Y') }} at {{ $viewing->preferred_time }}</td>
                             <td class="px-4 py-3">
                                 <span class="text-xs px-2 py-1 rounded-full

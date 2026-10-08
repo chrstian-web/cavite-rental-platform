@@ -7,7 +7,9 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FakeCheckoutController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentDocumentController;
 use App\Http\Controllers\Owner\MaintenanceRequestController as OwnerMaintenanceRequestController;
 use App\Http\Controllers\Owner\OwnerVerificationController;
 use App\Http\Controllers\Owner\PaymentController as OwnerPaymentController;
@@ -26,6 +28,7 @@ use App\Http\Controllers\Public\PropertyController as PublicPropertyController;
 use App\Http\Controllers\Tenant\ComparisonController;
 use App\Http\Controllers\Tenant\FavoriteController;
 use App\Http\Controllers\Tenant\MaintenanceRequestController as TenantMaintenanceRequestController;
+use App\Http\Controllers\Tenant\OnlinePaymentController as TenantOnlinePaymentController;
 use App\Http\Controllers\Tenant\PaymentController as TenantPaymentController;
 use App\Http\Controllers\Tenant\RecommendationController;
 use App\Http\Controllers\Tenant\RentalApplicationController as TenantRentalApplicationController;
@@ -110,6 +113,13 @@ Route::middleware('auth')->group(function () {
         // Payments (recorded against a contract)
         Route::post('contracts/{contract}/payments', [OwnerPaymentController::class, 'store'])->name('contracts.payments.store');
 
+        // Payment review queue (tenant-submitted payments)
+        Route::get('payments', [OwnerPaymentController::class, 'index'])->name('payments.index');
+        Route::get('payments/{payment}', [OwnerPaymentController::class, 'show'])->name('payments.show');
+        Route::patch('payments/{payment}/review', [OwnerPaymentController::class, 'review'])->name('payments.review');
+        Route::patch('payments/{payment}/received', [OwnerPaymentController::class, 'markReceived'])->name('payments.received');
+        Route::get('payments/{payment}/receipt', [OwnerPaymentController::class, 'receipt'])->name('payments.receipt');
+
         // Maintenance requests for owned/managed properties
         Route::get('maintenance', [OwnerMaintenanceRequestController::class, 'index'])->name('maintenance.index');
         Route::patch('maintenance/{maintenanceRequest}', [OwnerMaintenanceRequestController::class, 'updateStatus'])->name('maintenance.update');
@@ -133,6 +143,10 @@ Route::middleware('auth')->group(function () {
         Route::post('contracts/{contract}/review', [TenantReviewController::class, 'store'])->name('contracts.review.store');
 
         Route::get('payments', [TenantPaymentController::class, 'index'])->name('payments.index');
+        Route::get('payments/{payment}', [TenantPaymentController::class, 'show'])->name('payments.show');
+        Route::post('payments/{payment}', [TenantPaymentController::class, 'store'])->name('payments.store');
+        Route::post('payments/{payment}/pay-online', [TenantOnlinePaymentController::class, 'checkout'])->name('payments.pay-online');
+        Route::get('payments/{payment}/receipt', [TenantPaymentController::class, 'receipt'])->name('payments.receipt');
 
         Route::get('maintenance', [TenantMaintenanceRequestController::class, 'index'])->name('maintenance.index');
         Route::get('contracts/{contract}/maintenance/create', [TenantMaintenanceRequestController::class, 'create'])->name('maintenance.create');
@@ -148,6 +162,12 @@ Route::middleware('auth')->group(function () {
     });
 
     // Private document download — authorized per-request, never a public URL
+    // Built-in test checkout page used when PAYMENT_GATEWAY=fake (local/testing only; no real money).
+    Route::get('fake-payments/{checkout}', [FakeCheckoutController::class, 'show'])->name('fake-checkout.show');
+    Route::post('fake-payments/{checkout}/pay', [FakeCheckoutController::class, 'pay'])->name('fake-checkout.pay');
+    Route::post('fake-payments/{checkout}/cancel', [FakeCheckoutController::class, 'cancel'])->name('fake-checkout.cancel');
+
+    Route::get('payments/{payment}/proof', [PaymentDocumentController::class, 'download'])->name('payments.proof.download');
     Route::get('documents/{document}/download', [ApplicationDocumentController::class, 'download'])->name('documents.download');
     Route::get('documents/verification/{document}/download', [VerificationDocumentController::class, 'download'])->name('verification-documents.download');
 

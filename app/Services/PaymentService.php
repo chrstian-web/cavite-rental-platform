@@ -55,6 +55,40 @@ class PaymentService
         });
     }
 
+    /**
+     * Owner/manager records that a still-pending payment was received in
+     * person (cash, over-the-counter, etc.) without the tenant submitting proof.
+     *
+     * @param  array{payment_method: string, reference_number?: ?string, payment_date: string}  $data
+     */
+    public function markReceived(Payment $payment, User $reviewer, array $data): Payment
+    {
+        return DB::transaction(function () use ($payment, $reviewer, $data) {
+            $fromStatus = $payment->status;
+
+            $payment->update([
+                'payment_method' => $data['payment_method'],
+                'reference_number' => $data['reference_number'] ?? null,
+                'payment_date' => $data['payment_date'],
+                'status' => 'paid',
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                'review_reason' => null,
+            ]);
+
+            $payment->statusHistories()->create([
+                'actor_id' => $reviewer->id,
+                'from_status' => $fromStatus,
+                'to_status' => 'paid',
+                'reason' => 'Payment received in person and recorded by the owner.',
+            ]);
+
+            $payment->tenant->notify(new PaymentReviewedNotification($payment->fresh()));
+
+            return $payment->fresh();
+        });
+    }
+
     public function approve(Payment $payment, User $reviewer): Payment
     {
         return $this->transition($payment, $reviewer, 'paid', null);

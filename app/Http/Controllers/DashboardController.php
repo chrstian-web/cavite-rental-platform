@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Concerns\FiltersAndSortsProperties;
 use App\Models\MaintenanceRequest;
 use App\Models\Payment;
 use App\Models\Property;
@@ -14,6 +15,8 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    use FiltersAndSortsProperties;
+
     public function __invoke(Request $request): View
     {
         $user = $request->user();
@@ -32,8 +35,8 @@ class DashboardController extends Controller
         return [
             'totalProperties' => (clone $properties)->count(),
             'totalUnits' => RentalSpace::count(),
-            'availableUnits' => RentalSpace::where('status', 'available')->count(),
-            'occupiedUnits' => RentalSpace::where('status', 'occupied')->count(),
+            'availableUnits' => RentalSpace::openForRent()->count(),
+            'occupiedUnits' => RentalSpace::occupied()->count(),
             'totalTenants' => User::whereHas('role', fn ($q) => $q->where('slug', 'tenant'))->count(),
             'pendingApplications' => RentalApplication::where('status', 'pending')->count(),
             'monthlyRevenue' => Payment::where('status', 'paid')->whereMonth('payment_date', now()->month)->whereYear('payment_date', now()->year)->sum('amount'),
@@ -48,7 +51,32 @@ class DashboardController extends Controller
                 ->take(5)
                 ->get(),
             'typeDistribution' => Property::selectRaw('property_type, count(*) as total')->groupBy('property_type')->get(),
+            'totalOwners' => User::whereHas('role', fn ($q) => $q->where('slug', 'owner'))->count(),
+            'owners' => $this->ownerSummaries(),
         ];
+    }
+
+    /**
+     * Every property owner (most properties first) with their portfolio numbers,
+     * for the admin dashboard list.
+     */
+    protected function ownerSummaries(int $limit = 10)
+    {
+        $owners = User::query()
+            ->whereHas('role', fn ($q) => $q->where('slug', 'owner'))
+            ->withCount('properties')
+            ->orderByDesc('properties_count')
+            ->orderBy('first_name')
+            ->take($limit)
+            ->get();
+
+        return $owners->each(function (User $owner) {
+            $propertyIds = $owner->properties()->pluck('id');
+
+            $owner->units_count = RentalSpace::whereIn('property_id', $propertyIds)->count();
+            $owner->occupied_count = RentalSpace::whereIn('property_id', $propertyIds)->occupied()->count();
+            $owner->active_tenants_count = RentalContract::whereIn('property_id', $propertyIds)->where('status', 'active')->count();
+        });
     }
 
     protected function ownerStats(User $user): array
@@ -61,8 +89,8 @@ class DashboardController extends Controller
         return [
             'totalProperties' => $propertyIds->count(),
             'totalUnits' => RentalSpace::whereIn('property_id', $propertyIds)->count(),
-            'availableUnits' => RentalSpace::whereIn('property_id', $propertyIds)->where('status', 'available')->count(),
-            'occupiedUnits' => RentalSpace::whereIn('property_id', $propertyIds)->where('status', 'occupied')->count(),
+            'availableUnits' => RentalSpace::whereIn('property_id', $propertyIds)->openForRent()->count(),
+            'occupiedUnits' => RentalSpace::whereIn('property_id', $propertyIds)->occupied()->count(),
             'pendingApplications' => RentalApplication::whereIn('property_id', $propertyIds)->where('status', 'pending')->count(),
             'activeTenants' => RentalContract::whereIn('property_id', $propertyIds)->where('status', 'active')->count(),
             'monthlyRevenue' => Payment::whereHas('contract', fn ($q) => $q->whereIn('property_id', $propertyIds))
@@ -76,12 +104,30 @@ class DashboardController extends Controller
 
     protected function tenantStats(User $user): array
     {
+        $activeContract = RentalContract::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            // A soft-deleted property or rental space can leave an old
+            // contract row behind; it is no longer a current rental.
+            ->whereHas('property', fn ($q) => $q->withoutTrashed())
+            ->whereHas('rentalSpace')
+            ->with(['property', 'rentalSpace'])
+            ->first();
+
         return [
-            'activeContract' => RentalContract::where('user_id', $user->id)->where('status', 'active')->with(['property', 'rentalSpace'])->first(),
+            'activeContract' => $activeContract,
             'recentApplications' => RentalApplication::where('user_id', $user->id)->with('property')->latest()->take(3)->get(),
             'upcomingPayment' => Payment::where('user_id', $user->id)->where('status', 'pending')->orderBy('due_date')->first(),
             'upcomingViewings' => $user->viewingRequests()->whereIn('status', ['pending', 'confirmed'])->with('property')->orderBy('preferred_date')->take(3)->get(),
             'favoritesCount' => $user->favorites()->count(),
+            'availableProperties' => $this->baseVerifiedAvailableQuery()
+                ->when($activeContract, fn ($q) => $q->whereKeyNot($activeContract->property_id))
+                ->with(['images' => fn ($q) => $q->where('is_cover', true), 'location'])
+                ->withCount('rentalSpaces')
+                ->withAvg('reviews', 'rating')
+                ->latest()
+                ->take(8)
+                ->get(),
         ];
     }
 }

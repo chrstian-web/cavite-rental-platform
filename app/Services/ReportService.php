@@ -78,7 +78,7 @@ class ReportService
     protected function reportOccupancyRate(array $filters): array
     {
         $properties = Property::query()
-            ->with('rentalSpaces')
+            ->with(['rentalSpaces' => fn ($q) => $q->withCount(['rentalContracts as active_contracts_count' => fn ($c) => $c->where('status', 'active')])])
             ->when($filters['property_id'] ?? null, fn ($q) => $q->where('id', $filters['property_id']))
             ->when($filters['property_type'] ?? null, fn ($q) => $q->where('property_type', $filters['property_type']))
             ->get();
@@ -88,7 +88,10 @@ class ReportService
             'headers' => ['Property', 'Total Units', 'Occupied', 'Available', 'Occupancy Rate'],
             'rows' => $properties->map(function ($p) {
                 $total = $p->rentalSpaces->count();
-                $occupied = $p->rentalSpaces->where('status', 'occupied')->count();
+                // Same rule as RentalSpace::scopeOccupied() — status, capacity or an active contract.
+                $occupied = $p->rentalSpaces->filter(fn ($space) => $space->status === 'occupied'
+                    || $space->occupied_capacity > 0
+                    || $space->active_contracts_count > 0)->count();
                 $rate = $total > 0 ? round(($occupied / $total) * 100, 1) : 0;
 
                 return [$p->name, $total, $occupied, $total - $occupied, $rate.'%'];

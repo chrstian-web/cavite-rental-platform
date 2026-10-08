@@ -135,13 +135,9 @@ class OwnerVerificationService
 
         $verification->documents()->update(['status' => 'verified', 'verified_at' => now()]);
 
-        // NOTE: this used to set 'approved' as an intermediate state, expecting
-        // a follow-up OTP/email verification step (Step 20) to promote it to
-        // 'verified'. That step was never built, so every approved owner was
-        // permanently stuck — locked out of owner features with no path
-        // forward. Until Step 20 actually ships, approval goes straight to
-        // 'verified' so owners aren't blocked by an unfinished feature.
-        $verification->user->update(['owner_verification_status' => 'verified']);
+        // Approval is intentionally distinct from the final owner verification
+        // state; the follow-up verification step promotes this to `verified`.
+        $verification->user->update(['owner_verification_status' => 'approved']);
         $verification->user->notify(new OwnerVerificationResultNotification($verification));
 
         return $verification->fresh();

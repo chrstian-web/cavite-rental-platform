@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Models\RentalApplication;
+use App\Models\Payment;
 use App\Models\RentalContract;
 use App\Notifications\ContractActivatedNotification;
+use App\Notifications\DownPaymentRequestedNotification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class RentalContractService
@@ -19,7 +22,7 @@ class RentalContractService
         abort_if($application->contract()->exists(), 422, 'A contract already exists for this application.');
 
         return DB::transaction(function () use ($application, $data) {
-            return RentalContract::create([
+            $contract = RentalContract::create([
                 ...$data,
                 'rental_application_id' => $application->id,
                 'user_id' => $application->user_id,
@@ -28,7 +31,56 @@ class RentalContractService
                 'rental_space_id' => $application->rental_space_id,
                 'status' => 'draft',
             ]);
+
+            // The tenant must pay the security deposit / advance before move-in.
+            $this->ensureDownPayments($contract);
+
+            return $contract;
         });
+    }
+
+    /**
+     * Makes sure every required down payment (security deposit, advance) has a
+     * payable record. Safe to call repeatedly: it only creates what is missing,
+     * and re-issues one if the previous attempt was rejected ('failed').
+     */
+    public function ensureDownPayments(RentalContract $contract): void
+    {
+        $created = [];
+
+        foreach ($contract->downPaymentRequirements() as $type => $amount) {
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $hasLive = $contract->payments()
+                ->where('payment_type', $type)
+                ->whereIn('status', ['pending', 'submitted', 'paid', 'overdue'])
+                ->exists();
+
+            if ($hasLive) {
+                continue;
+            }
+
+            $created[] = $contract->payments()->create([
+                'user_id' => $contract->user_id,
+                'payment_type' => $type,
+                'amount' => $amount,
+                'due_date' => $this->downPaymentDueDate($contract),
+                'status' => 'pending',
+                'notes' => 'Required before move-in.',
+            ]);
+        }
+
+        if ($created !== []) {
+            $contract->tenant->notify(new DownPaymentRequestedNotification($contract));
+        }
+    }
+
+    /** One day before move-in, but never in the past. */
+    protected function downPaymentDueDate(RentalContract $contract)
+    {
+        return Carbon::today()->max($contract->start_date->copy()->subDay());
     }
 
     /**
@@ -38,6 +90,9 @@ class RentalContractService
      */
     public function activate(RentalContract $contract): RentalContract
     {
+        // Airbnb-style: the unit is only handed over once the down payment is in.
+        abort_unless($contract->hasSettledDownPayments(), 422, $contract->downPaymentBlockedMessage());
+
         return DB::transaction(function () use ($contract) {
             $contract->update(['status' => 'active']);
 

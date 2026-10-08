@@ -15,6 +15,10 @@
 
                 <dl class="grid grid-cols-2 gap-y-2 text-sm">
                     <dt class="text-slate-500">Property</dt><dd class="text-slate-900">{{ $payment->contract->property->name }}</dd>
+                    <dt class="text-slate-500">Payment type</dt><dd class="text-slate-900">{{ $payment->typeLabel() }}</dd>
+                    @if ($payment->isOnline())
+                        <dt class="text-slate-500">Paid via</dt><dd class="text-slate-900">Online ({{ ucfirst((string) $payment->gateway) }}){{ $payment->receipt_number ? ' · '.$payment->receipt_number : '' }}</dd>
+                    @endif
                     <dt class="text-slate-500">Amount</dt><dd class="text-slate-900 font-medium">₱{{ number_format($payment->amount, 2) }}</dd>
                     <dt class="text-slate-500">Due date</dt><dd class="text-slate-900">{{ $payment->due_date->format('M j, Y') }}</dd>
                     @if ($payment->payment_date)

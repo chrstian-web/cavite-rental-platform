@@ -28,6 +28,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Online payments. 'fake' = built-in test checkout (local/testing only, no real money).
+    // 'paymongo' = real PayMongo checkout (use sk_test_ keys for testing, sk_live_ for real money).
+    'payment_gateway' => env('PAYMENT_GATEWAY', 'fake'),
+
+    'paymongo' => [
+        'secret_key' => env('PAYMONGO_SECRET_KEY', ''),
+        'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET', ''),
+        'payment_methods' => ['card', 'gcash', 'qrph'],
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
