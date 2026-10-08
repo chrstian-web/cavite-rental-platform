@@ -95,11 +95,19 @@
                                 </div>
                                 <div class="text-right">
                                     <p class="font-medium text-slate-900">₱{{ number_format($space->monthly_rent) }}/mo</p>
-                                    <span class="text-xs {{ $space->status === 'available' ? 'text-green-600' : 'text-slate-400' }}">
-                                        {{ str($space->status)->title() }}
-                                    </span>
+                                    @php $rented = $space->isRented(); @endphp
+                                    @if ($rented)
+                                        <span class="text-xs font-semibold text-red-500">Occupied</span>
+                                        @if ($space->total_capacity > 1)
+                                            <span class="block text-[11px] text-slate-400">{{ min($space->active_contracts_count ?? 0, $space->total_capacity) }}/{{ $space->total_capacity }} taken</span>
+                                        @endif
+                                    @else
+                                        <span class="text-xs {{ $space->status === 'available' ? 'text-green-600' : 'text-slate-400' }}">
+                                            {{ str($space->status)->title() }}
+                                        </span>
+                                    @endif
                                     @auth
-                                        @if (auth()->user()->isTenant() && $space->status === 'available')
+                                        @if (auth()->user()->isTenant() && $space->status === 'available' && ! $rented)
                                             <a href="{{ route('tenant.applications.create', $space) }}" class="block text-xs text-blue-600 hover:underline mt-1">Apply</a>
                                         @endif
                                     @endauth

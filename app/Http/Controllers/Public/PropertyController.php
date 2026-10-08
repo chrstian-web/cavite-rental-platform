@@ -68,7 +68,8 @@ class PropertyController extends Controller
         $property = Property::query()
             ->with([
                 'images', 'amenities', 'owner', 'location', 'barangay',
-                'rentalSpaces' => fn ($q) => $q->orderBy('space_number'),
+                'rentalSpaces' => fn ($q) => $q->orderBy('space_number')
+                    ->withCount(['rentalContracts as active_contracts_count' => fn ($c) => $c->where('status', 'active')]),
                 'rentalSpaces.images',
                 'virtualTour.scenes.hotspots',
             ])

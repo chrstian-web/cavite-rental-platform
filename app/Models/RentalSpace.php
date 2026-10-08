@@ -56,6 +56,20 @@ class RentalSpace extends Model
         return max(0, $this->total_capacity - $this->occupied_capacity);
     }
 
+    /**
+     * True when a tenant is renting this unit right now (an active contract) or
+     * it is flagged occupied. Pass the list through
+     * withCount(['rentalContracts as active_contracts_count' => ...]) to avoid
+     * one query per unit.
+     */
+    public function isRented(): bool
+    {
+        $active = $this->active_contracts_count
+            ?? $this->rentalContracts()->where('status', 'active')->count();
+
+        return $active > 0 || $this->status === 'occupied';
+    }
+
     public function scopeAvailable($query)
     {
         return $query->where('status', 'available');
