@@ -26,8 +26,8 @@ class RentalApplicationTest extends TestCase
             'number_of_occupants' => 1,
             'employment_status' => 'employed',
             'documents' => [
-                'valid_id_1' => UploadedFile::fake()->image('id1.jpg'),
-                'valid_id_2' => UploadedFile::fake()->image('id2.jpg'),
+                'valid_id_1' => UploadedFile::fake()->create('id1.jpg', 100, 'image/jpeg'),
+                'valid_id_2' => UploadedFile::fake()->create('id2.jpg', 100, 'image/jpeg'),
             ],
         ]);
 
@@ -123,14 +123,14 @@ class RentalApplicationTest extends TestCase
             'desired_move_in_date' => now()->addWeek()->toDateString(),
             'number_of_occupants' => 1,
             'employment_status' => 'student',
-            'documents' => ['student_id' => UploadedFile::fake()->image('student.jpg')],
+            'documents' => ['student_id' => UploadedFile::fake()->create('student.jpg', 100, 'image/jpeg')],
         ];
 
         $this->actingAs($tenant)->post("/tenant/rental-spaces/{$space->id}/apply", $payload)
             ->assertSessionHasErrors(['documents.parent_id_1', 'documents.parent_id_2']);
 
-        $payload['documents']['parent_id_1'] = UploadedFile::fake()->image('p1.jpg');
-        $payload['documents']['parent_id_2'] = UploadedFile::fake()->image('p2.jpg');
+        $payload['documents']['parent_id_1'] = UploadedFile::fake()->create('p1.jpg', 100, 'image/jpeg');
+        $payload['documents']['parent_id_2'] = UploadedFile::fake()->create('p2.jpg', 100, 'image/jpeg');
 
         $this->actingAs($tenant)->post("/tenant/rental-spaces/{$space->id}/apply", $payload)
             ->assertRedirect(route('tenant.applications.index'));
@@ -149,7 +149,7 @@ class RentalApplicationTest extends TestCase
             'desired_move_in_date' => now()->addWeek()->toDateString(),
             'number_of_occupants' => 1,
             'employment_status' => 'self_employed',
-            'documents' => ['valid_id_1' => UploadedFile::fake()->image('id1.jpg')],
+            'documents' => ['valid_id_1' => UploadedFile::fake()->create('id1.jpg', 100, 'image/jpeg')],
         ])->assertSessionHasErrors(['documents.valid_id_2']);
     }
 }
