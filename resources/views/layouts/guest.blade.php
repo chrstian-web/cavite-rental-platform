@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Cavite Rental Platform')</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.form-fields')
 </head>
 <body class="min-h-screen bg-slate-50 flex items-center justify-center px-4">
     <div class="w-full max-w-md">

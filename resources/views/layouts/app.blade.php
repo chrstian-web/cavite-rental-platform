@@ -4,13 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Dashboard') · Cavite Rental Platform</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>[x-cloak] { display: none !important; }</style>
     @stack('head')
+    @include('partials.form-fields')
+    @if (auth()->check())
+        @include('partials.theme-head')
+    @endif
 </head>
-<body class="min-h-screen bg-slate-50">
+<body class="min-h-screen bg-slate-50 {{ auth()->check() ? 'renter-dark' : '' }}">
+    @if (auth()->check())
+        @include('partials.theme-init')
+    @endif
     <nav class="bg-white border-b border-slate-200" x-data="{ mobileOpen: false }">
         <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
             <div class="flex items-center gap-6">
@@ -55,6 +63,8 @@
                 @include('partials.notification-bell')
                 @include('partials.profile-dropdown')
 
+                @include('partials.theme-toggle')
+
                 {{-- Mobile hamburger --}}
                 <button @click="mobileOpen = !mobileOpen" class="md:hidden text-slate-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -97,6 +107,10 @@
     <main class="max-w-6xl mx-auto px-4 py-8">
         @yield('content')
     </main>
+
+    @stack('scripts')
+
+    @include('partials.theme-script')
 
     @if (session('status'))
         <script>

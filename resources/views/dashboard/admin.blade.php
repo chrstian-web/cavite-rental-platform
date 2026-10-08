@@ -3,7 +3,12 @@
 @section('title', 'Admin Dashboard')
 
 @section('content')
-    <h1 class="text-xl font-semibold text-slate-900 mb-6">Admin Dashboard</h1>
+    <div class="rt-hero">
+        <p class="eyebrow rt-eyebrow">Admin console</p>
+        <h1>Admin Dashboard</h1>
+        <p>Platform health, verifications and activity at a glance.</p>
+        @include('partials.landing-mascots')
+    </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         @foreach ([
@@ -25,6 +30,62 @@
             <p class="text-xs text-slate-500">Revenue This Month (paid)</p>
             <p class="text-2xl font-bold text-green-600 mt-1">₱{{ number_format($monthlyRevenue, 2) }}</p>
         </div>
+    </div>
+
+    {{-- Property owners --}}
+    <div class="mb-8 bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+            <div>
+                <p class="text-sm font-medium text-slate-700">Property Owners</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ $totalOwners }} registered{{ $totalOwners > $owners->count() ? ' · showing top '.$owners->count().' by properties' : '' }}</p>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-bold">
+                <a href="{{ route('admin.owner-verifications.index') }}" class="text-rose-600 hover:underline">Verifications</a>
+                <a href="{{ route('admin.users.index') }}" class="text-rose-600 hover:underline">All users →</a>
+            </div>
+        </div>
+
+        @if ($owners->isEmpty())
+            <p class="px-5 py-8 text-sm text-slate-400 text-center">No property owners yet.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-500 text-left">
+                        <tr>
+                            <th class="px-5 py-2.5 font-medium">Owner</th>
+                            <th class="px-3 py-2.5 font-medium">Verification</th>
+                            <th class="px-3 py-2.5 font-medium text-right">Properties</th>
+                            <th class="px-3 py-2.5 font-medium text-right">Units</th>
+                            <th class="px-3 py-2.5 font-medium text-right">Occupied</th>
+                            <th class="px-5 py-2.5 font-medium text-right">Active tenants</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach ($owners as $owner)
+                            @php
+                                $vs = $owner->owner_verification_status ?? 'not_submitted';
+                                $vsClass = match ($vs) {
+                                    'verified', 'approved' => 'bg-green-50 text-green-700',
+                                    'rejected' => 'bg-red-50 text-red-700',
+                                    default => 'bg-amber-50 text-amber-700',
+                                };
+                            @endphp
+                            <tr>
+                                <td class="px-5 py-3">
+                                    <a href="{{ route('admin.users.index', ['search' => $owner->email]) }}" class="font-medium text-slate-900 hover:underline">{{ $owner->first_name }} {{ $owner->last_name }}</a>
+                                    <p class="text-xs text-slate-400">{{ $owner->email }}</p>
+                                </td>
+                                <td class="px-3 py-3"><span class="text-xs px-2 py-1 rounded-full {{ $vsClass }}">{{ str($vs)->replace('_', ' ')->title() }}</span></td>
+                                <td class="px-3 py-3 text-right text-slate-700">{{ $owner->properties_count }}</td>
+                                <td class="px-3 py-3 text-right text-slate-700">{{ $owner->units_count }}</td>
+                                <td class="px-3 py-3 text-right text-slate-700">{{ $owner->occupied_count }}</td>
+                                <td class="px-5 py-3 text-right text-slate-700">{{ $owner->active_tenants_count }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

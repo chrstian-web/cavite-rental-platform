@@ -42,8 +42,11 @@
     .btn-muted:hover { border-color: #94a3b8; background: #f8fafc; }
     .back-link { display: inline-flex; align-items: center; gap: .55rem; width: fit-content; border: 1px solid #e2e8f0; border-radius: .75rem; background: rgb(255 255 255 / .9); color: #475569; padding: .55rem .8rem; font-size: .875rem; font-weight: 700; box-shadow: 0 1px 2px rgb(15 23 42 / .04); transition: all .2s ease; }
     .back-link:hover { border-color: #cbd5e1; background: #fff; color: #e11d48; box-shadow: 0 5px 12px rgb(15 23 42 / .08); transform: translateX(-2px); }
-    .back-link svg { width: 1rem; height: 1rem; transition: transform .2s ease; }
+    .back-link svg,
+    .back-link__icon { display: block; flex: 0 0 1rem; width: 1rem !important; height: 1rem !important; max-width: 1rem; max-height: 1rem; transition: transform .2s ease; }
     .back-link:hover svg { transform: translateX(-2px); }
+    .application-submit-button { min-height: 2.75rem; padding-inline: 1.25rem; box-shadow: 0 8px 18px rgb(225 29 72 / .18); }
+    .application-submit-button:hover { box-shadow: 0 12px 24px rgb(190 24 93 / .24); transform: translateY(-1px); }
 }
 
 @layer utilities {

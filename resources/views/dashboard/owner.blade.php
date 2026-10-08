@@ -22,9 +22,12 @@
         </div>
     @endif
 
-    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-        <div><p class="eyebrow text-emerald-600 mb-2">Host portal</p><h1 class="text-3xl font-extrabold tracking-tight text-slate-950">Welcome, {{ auth()->user()->first_name }}</h1><p class="text-sm text-slate-500 mt-1">Keep your listings healthy and your tenants supported.</p></div>
-        <a href="{{ route('owner.properties.create') }}" class="btn-primary btn-host">+ Add Property</a>
+    <div class="rt-hero">
+        <p class="eyebrow rt-eyebrow">Host portal</p>
+        <h1>Welcome, {{ auth()->user()->first_name }}</h1>
+        <p>Keep your listings healthy and your tenants supported.</p>
+        <a href="{{ route('owner.properties.create') }}" class="btn-primary btn-tenant mt-4">+ Add Property</a>
+        @include('partials.landing-mascots')
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

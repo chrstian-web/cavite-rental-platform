@@ -9,8 +9,16 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>[x-cloak] { display: none !important; }</style>
     @stack('head')
+    @include('partials.form-fields')
+    @php $isLanding = trim($__env->yieldContent('body_class')) === 'landing'; @endphp
+    @unless ($isLanding)
+        @include('partials.theme-head')
+    @endunless
 </head>
-<body class="min-h-screen bg-slate-50 flex flex-col" data-role="tenant">
+<body class="min-h-screen bg-slate-50 flex flex-col @yield('body_class') {{ $isLanding ? '' : 'renter-dark' }}" data-role="tenant">
+    @unless ($isLanding)
+        @include('partials.theme-init')
+    @endunless
 
     <!-- Top Navigation Bar -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -45,6 +53,9 @@
 
             <!-- Right Nav Actions (Notifications & Profile Menu) -->
             <div class="flex items-center gap-3 text-sm">
+                @unless ($isLanding)
+                    @include('partials.theme-toggle')
+                @endunless
                 @auth
                     <!-- Notifications Dropdown -->
                     <div class="relative" x-data="{ open: false }">
@@ -67,8 +78,9 @@
                             <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                                 <span class="font-semibold text-slate-900">Notifications</span>
                                 @if(auth()->user()->unreadNotifications->count() > 0)
-                                    <form action="{{ route('notifications.markAllRead') }}" method="POST">
+                                    <form action="{{ route('notifications.readAll') }}" method="POST">
                                         @csrf
+                                        @method('PATCH')
                                         <button type="submit" class="text-xs text-blue-600 hover:underline">Mark all as read</button>
                                     </form>
                                 @endif
@@ -110,7 +122,7 @@
                              class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50">
                             <div class="px-4 py-2 border-b border-slate-100">
                                 <p class="text-xs font-semibold text-slate-900 truncate">{{ auth()->user()->name }}</p>
-                                <p class="text-[10px] text-slate-500 capitalize">{{ str_replace('_', ' ', auth()->user()->role ?? 'User') }}</p>
+                               <p class="text-[10px] text-slate-500 capitalize">{{ str_replace('_', ' ', auth()->user()->role?->name ?? auth()->user()->role?->slug ?? 'User') }}</p>
                             </div>
 
                             <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50">
@@ -147,7 +159,7 @@
     </nav>
 
     <!-- Main Body Area -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10 flex-1 w-full">
+    <main class="@yield('main_class', 'max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10') flex-1 w-full">
         @yield('content')
     </main>
 
@@ -172,5 +184,8 @@
     </script>
 @endif
 
+    @unless ($isLanding)
+        @include('partials.theme-script')
+    @endunless
 </body>
 </html>

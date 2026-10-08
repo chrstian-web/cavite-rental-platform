@@ -12,7 +12,7 @@
         <form method="GET" action="{{ route('properties.index') }}" class="space-y-2">
             <select name="location_id" class="w-full rounded-lg border-slate-300 text-sm">
                 <option value="">Any location</option>
-                @foreach (\App\Models\Location::where('is_active', true)->orderBy('city_municipality')->get() as $loc)
+                @foreach (\Illuminate\Support\Facades\Schema::hasTable('locations') ? \App\Models\Location::where('is_active', true)->orderBy('city_municipality')->get() : collect() as $loc)
                     <option value="{{ $loc->id }}">{{ $loc->city_municipality }}</option>
                 @endforeach
             </select>

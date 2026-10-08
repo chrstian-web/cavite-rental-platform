@@ -22,6 +22,8 @@
     @endphp
 
 
+    <a href="{{ route('home') }}" class="auth-brand">Cavite<span>Rentals</span></a>
+
     <div class="auth-container {{ $activePanel === 'register' ? 'right-panel-active' : '' }}" id="authContainer">
 
         {{-- SIGN UP FORM --}}
@@ -93,13 +95,15 @@
         <div class="overlay-container">
             <div class="overlay">
                 <div class="overlay-panel overlay-left">
-                    <h1>Welcome Back!</h1>
-                    <p>Enter your personal details to use all of site features</p>
+                    @include('partials.landing-mascots')
+                    <h1>Welcome back.</h1>
+                    <p>Sign in to pick up your searches, applications, and viewings.</p>
                     <button type="button" class="ghost-btn" id="showSignIn">Sign In</button>
                 </div>
                 <div class="overlay-panel overlay-right">
-                    <h1>Hello, Friend!</h1>
-                    <p>Register with your personal details to start using Cavite Rentals</p>
+                    @include('partials.landing-mascots')
+                    <h1>New to Cavite Rentals?</h1>
+                    <p>Create an account to save favorites, compare listings, and request viewings.</p>
                     <button type="button" class="ghost-btn" id="showSignUp">Sign Up</button>
                 </div>
             </div>
@@ -112,6 +116,8 @@
             {{ $activePanel === 'register' ? 'Already have an account? Sign in' : "Don't have an account? Sign up" }}
         </a>
     </p>
+
+    <a href="{{ route('home') }}" class="auth-back">← Back to home</a>
 
     <script>
         const container = document.getElementById('authContainer');

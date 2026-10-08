@@ -11,14 +11,21 @@
             // Images are served through an authorization-aware endpoint rather than
             // exposing the public storage path in the page source.
             'panorama' => route('virtual-tour.panorama', [$tour->property_id, $tour->id, $scene->id]),
-            'hotSpots' => $scene->hotspots->map(fn ($hotspot) => [
+            'thumbnail' => route('virtual-tour.panorama', [$tour->property_id, $tour->id, $scene->id]),
+            'hotSpots' => $scene->hotspots->map(function ($hotspot) use ($tour) {
+                $target = $hotspot->target_scene_id
+                    ? $tour->scenes->firstWhere('id', $hotspot->target_scene_id)
+                    : null;
+
+                return [
                 'pitch' => (float) $hotspot->position_y,
                 'yaw' => (float) $hotspot->position_x,
                 'type' => $hotspot->target_scene_id ? 'scene' : 'info',
-                'text' => $hotspot->label ?: ($hotspot->target_scene_id ? 'Go to '.$scene->title : 'Information'),
+                'text' => $hotspot->label ?: ($target ? 'Go to '.$target->title : 'Information'),
                 'sceneId' => $hotspot->target_scene_id ? 'scene-'.$hotspot->target_scene_id : null,
                 'cssClass' => $hotspot->target_scene_id ? 'tour-hotspot-arrow' : 'tour-hotspot-info',
-            ])->toArray(),
+                ];
+            })->values()->toArray(),
         ],
     ])->toJson(JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
     $firstSceneId = 'scene-'.$tour->scenes->first()->id;
@@ -26,36 +33,79 @@
 
 <style>
     .tour-hotspot-arrow,
-    .tour-hotspot-info {
-        position: relative;
+    .tour-hotspot-info,
+    .tour-placement-marker {
+        /* Pannellum positions this element with top/left/transform. */
+        position: absolute !important;
         border: 2px solid white;
         border-radius: 9999px;
         cursor: pointer;
         box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
-        transition: transform .15s ease, box-shadow .15s ease;
+        transition: box-shadow .15s ease;
     }
+
     .tour-hotspot-arrow {
-        width: 34px;
-        height: 34px;
-        background: #2563eb;
-        animation: tour-pulse 1.8s ease-in-out infinite;
+    display: block !important;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    max-width: 52px !important;
+    max-height: 52px !important;
+    background: rgba(255, 255, 255, .88) !important;
+    border: 2px solid rgba(15, 23, 42, .28) !important;
+    border-radius: 9999px !important;
+    cursor: pointer;
+    box-sizing: border-box !important;
+    animation: tour-pulse 1.8s ease-in-out infinite;
     }
+
     .tour-hotspot-arrow::after {
         content: '';
         position: absolute;
-        inset: 0;
-        width: 10px;
-        height: 10px;
-        margin: auto;
-        border-top: 3px solid white;
-        border-right: 3px solid white;
-        transform: rotate(45deg);
+        left: 50%;
+        top: 50%;
+        width: 16px;
+        height: 16px;
+        border-right: 4px solid #0f172a;
+        border-bottom: 4px solid #0f172a;
+        transform: translate(-50%, -62%) rotate(45deg);
     }
+    .tour-placement-marker {
+        width: 56px;
+        height: 56px;
+        border: 3px solid rgba(15, 23, 42, .35);
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, .95);
+        cursor: grab;
+        box-shadow:
+            0 3px 10px rgba(0, 0, 0, .45),
+            0 0 0 5px rgba(255, 255, 255, .28);
+        z-index: 20;
+    }
+
+    .tour-placement-marker:active {
+        cursor: grabbing;
+    }
+
+    .tour-placement-marker::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 17px !important;
+        height: 17px !important;
+        border-right: 4px solid #0f172a;
+        border-bottom: 4px solid #0f172a;
+        transform: translate(-50%, -62%) rotate(45deg);
+    }
+
     .tour-hotspot-info {
         width: 28px;
         height: 28px;
         background: #0f172a;
     }
+
     .tour-hotspot-info::after {
         content: 'i';
         color: white;
@@ -64,36 +114,85 @@
         height: 100%;
         font: 700 16px/1 sans-serif;
     }
+
     .tour-hotspot-arrow:hover,
     .tour-hotspot-arrow:focus,
     .tour-hotspot-info:hover,
     .tour-hotspot-info:focus {
-        transform: scale(1.2);
-        box-shadow: 0 0 0 4px rgba(255, 255, 255, .45), 0 2px 8px rgba(0, 0, 0, .4);
+        box-shadow:
+            0 0 0 4px rgba(255, 255, 255, .45),
+            0 2px 8px rgba(0, 0, 0, .4);
         outline: none;
     }
+
     @keyframes tour-pulse {
-        0%, 100% { box-shadow: 0 2px 8px rgba(0, 0, 0, .35), 0 0 0 0 rgba(37, 99, 235, .5); }
-        50% { box-shadow: 0 2px 8px rgba(0, 0, 0, .35), 0 0 0 10px rgba(37, 99, 235, 0); }
+        0%, 100% {
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, .35),
+                0 0 0 0 rgba(255, 255, 255, .65);
+        }
+
+        50% {
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, .35),
+                0 0 0 12px rgba(255, 255, 255, 0);
+        }
     }
+
     .tour-viewer-overlay {
         overscroll-behavior: contain;
     }
+
     .tour-viewer-overlay .pnlm-container {
         background: #020617;
     }
+
     .tour-viewer-thumbnails {
         scrollbar-width: thin;
         scrollbar-color: rgba(255, 255, 255, .55) transparent;
     }
+
     .tour-viewer-thumbnail[aria-current="true"] {
         border-color: white;
         box-shadow: 0 0 0 2px rgba(255, 255, 255, .35);
     }
+
+    /*
+     * Fix the oversized previous and close buttons inside
+     * the virtual-tour fullscreen overlay.
+     */
+    .tour-viewer-overlay button > svg {
+        display: block;
+        flex: 0 0 auto;
+        width: 20px !important;
+        height: 20px !important;
+        max-width: 20px !important;
+        max-height: 20px !important;
+    }
+
+    /*
+     * Keep the panorama visible even if Tailwind's
+     * arbitrary-height utility is unavailable or overridden.
+     */
+    .tour-inline-viewer {
+        display: block;
+        width: 100%;
+        height: 320px !important;
+        min-height: 320px;
+        background: #020617;
+    }
+
+    @media (min-width: 640px) {
+        .tour-inline-viewer {
+            height: 420px !important;
+            min-height: 420px;
+        }
+    }
 </style>
 
+
 <div class="relative">
-    <div id="{{ $viewerId }}-inline" class="w-full h-[320px] sm:h-[420px] rounded-xl overflow-hidden bg-slate-950" aria-label="360 degree virtual tour preview"></div>
+    <div id="{{ $viewerId }}-inline" class="tour-inline-viewer w-full rounded-xl overflow-hidden bg-slate-950" aria-label="360 degree virtual tour preview"></div>
     <div class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="flex flex-wrap gap-2" aria-label="Tour scenes">
             @foreach ($tour->scenes as $scene)
@@ -257,7 +356,7 @@
             button.className = 'tour-viewer-thumbnail shrink-0 w-28 sm:w-36 rounded-lg border-2 border-white/20 bg-black/60 px-3 py-2 text-left text-white hover:border-white/70 focus:outline-none focus:ring-2 focus:ring-white';
             button.setAttribute('aria-current', sceneId === firstScene ? 'true' : 'false');
             button.setAttribute('aria-label', 'Open scene: ' + scene.title);
-            button.innerHTML = '<span class="block truncate text-xs font-medium">' + escapeHtml(scene.title || 'Scene') + '</span>';
+            button.innerHTML = '<span class="block h-12 sm:h-16 mb-1 rounded bg-cover bg-center bg-slate-700/80" style="background-image:url(\'' + escapeHtml(scene.thumbnail) + '\')" aria-hidden="true"></span><span class="block truncate text-xs font-medium">' + escapeHtml(scene.title || 'Scene') + '</span>';
             button.addEventListener('click', function () { loadFullScene(sceneId, true); });
             container.appendChild(button);
         });
@@ -274,8 +373,13 @@
         setError(false);
         fullViewer.loadScene(sceneId);
     }
+    window['{{ $viewerId }}_getInlineViewer'] = function () { return inlineViewer; };
     document.addEventListener('DOMContentLoaded', function () {
         renderThumbnails();
+        if (typeof window.pannellum === 'undefined') {
+            document.getElementById(ids.inline).innerHTML = '<div class="h-full grid place-items-center p-6 text-center text-sm text-white/70">The 360° viewer could not start. Please refresh the page.</div>';
+            return;
+        }
         inlineViewer = pannellum.viewer(ids.inline, baseConfig());
         inlineViewer.on('error', function () {
             document.getElementById(ids.inline).innerHTML = '<div class="h-full grid place-items-center p-6 text-center text-sm text-white/70">The 360° preview could not be loaded.</div>';
@@ -289,7 +393,10 @@
         });
     });
     window['{{ $viewerId }}_goto'] = function (sceneId) {
-        if (inlineViewer && scenes[sceneId]) inlineViewer.loadScene(sceneId);
+        if (inlineViewer && scenes[sceneId]) {
+            currentScene = sceneId;
+            inlineViewer.loadScene(sceneId);
+        }
     };
     window['{{ $viewerId }}_openFullscreen'] = function () {
         lastFocusedElement = document.activeElement;
