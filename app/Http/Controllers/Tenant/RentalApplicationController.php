@@ -30,7 +30,7 @@ class RentalApplicationController extends Controller
 
     public function create(RentalSpace $space): View
     {
-        $space->load('property');
+        $space->load(['property', 'images']);
 
         return view('tenant.applications.create', ['space' => $space, 'property' => $space->property]);
     }
@@ -43,7 +43,7 @@ class RentalApplicationController extends Controller
             $request->user(),
             $space,
             $data,
-            $request->file('documents', [])
+            $request->safe()->only(['documents'])['documents'] ?? []
         );
 
         return redirect()

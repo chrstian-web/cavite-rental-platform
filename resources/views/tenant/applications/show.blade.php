@@ -41,7 +41,7 @@
                     @foreach ($application->documents as $doc)
                         <li>
                             <a href="{{ route('documents.download', $doc) }}" class="text-blue-600 hover:underline">
-                                {{ str($doc->document_type)->replace('_',' ')->title() }} — {{ $doc->original_filename }}
+                                {{ $doc->label }} — {{ $doc->original_filename }}
                             </a>
                         </li>
                     @endforeach

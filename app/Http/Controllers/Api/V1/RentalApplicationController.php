@@ -33,7 +33,7 @@ class RentalApplicationController extends ApiController
             $request->user(),
             $space,
             $request->safe()->except('documents'),
-            $request->file('documents', [])
+            $request->safe()->only(['documents'])['documents'] ?? []
         );
 
         return $this->success(

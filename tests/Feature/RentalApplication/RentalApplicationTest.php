@@ -7,6 +7,8 @@ use App\Models\RentalApplication;
 use App\Models\RentalSpace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RentalApplicationTest extends TestCase
@@ -15,12 +17,18 @@ class RentalApplicationTest extends TestCase
 
     public function test_a_tenant_can_submit_a_rental_application(): void
     {
+        Storage::fake('local');
         $tenant = User::factory()->tenant()->create();
         $space = RentalSpace::factory()->create();
 
         $response = $this->actingAs($tenant)->post("/tenant/rental-spaces/{$space->id}/apply", [
             'desired_move_in_date' => now()->addWeek()->toDateString(),
             'number_of_occupants' => 1,
+            'employment_status' => 'employed',
+            'documents' => [
+                'valid_id_1' => UploadedFile::fake()->image('id1.jpg'),
+                'valid_id_2' => UploadedFile::fake()->image('id2.jpg'),
+            ],
         ]);
 
         $response->assertRedirect(route('tenant.applications.index'));
@@ -103,5 +111,45 @@ class RentalApplicationTest extends TestCase
 
         $response->assertForbidden();
         $this->assertDatabaseHas('rental_applications', ['id' => $application->id, 'status' => 'pending']);
+    }
+
+    public function test_a_student_must_upload_a_student_id_and_both_parents_ids(): void
+    {
+        Storage::fake('local');
+        $tenant = User::factory()->tenant()->create();
+        $space = RentalSpace::factory()->create();
+
+        $payload = [
+            'desired_move_in_date' => now()->addWeek()->toDateString(),
+            'number_of_occupants' => 1,
+            'employment_status' => 'student',
+            'documents' => ['student_id' => UploadedFile::fake()->image('student.jpg')],
+        ];
+
+        $this->actingAs($tenant)->post("/tenant/rental-spaces/{$space->id}/apply", $payload)
+            ->assertSessionHasErrors(['documents.parent_id_1', 'documents.parent_id_2']);
+
+        $payload['documents']['parent_id_1'] = UploadedFile::fake()->image('p1.jpg');
+        $payload['documents']['parent_id_2'] = UploadedFile::fake()->image('p2.jpg');
+
+        $this->actingAs($tenant)->post("/tenant/rental-spaces/{$space->id}/apply", $payload)
+            ->assertRedirect(route('tenant.applications.index'));
+
+        $this->assertDatabaseHas('application_documents', ['document_type' => 'student_id']);
+        $this->assertDatabaseHas('application_documents', ['document_type' => 'parent_id_2']);
+    }
+
+    public function test_non_students_must_upload_two_valid_ids(): void
+    {
+        Storage::fake('local');
+        $tenant = User::factory()->tenant()->create();
+        $space = RentalSpace::factory()->create();
+
+        $this->actingAs($tenant)->post("/tenant/rental-spaces/{$space->id}/apply", [
+            'desired_move_in_date' => now()->addWeek()->toDateString(),
+            'number_of_occupants' => 1,
+            'employment_status' => 'self_employed',
+            'documents' => ['valid_id_1' => UploadedFile::fake()->image('id1.jpg')],
+        ])->assertSessionHasErrors(['documents.valid_id_2']);
     }
 }

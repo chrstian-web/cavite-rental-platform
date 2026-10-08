@@ -285,4 +285,10 @@ body.renter-dark .tour-inline-viewer { border: 1px solid var(--line); }
 /* Verification/status banners with .border-current keep their text colour */
 body.renter-dark main .bg-white.border-current { background: rgba(255,255,255,.06) !important; }
 
+/* Upload dropzone (application form) */
+.rt-drop:hover, .rt-drop:focus-within { border-color: #f43f5e !important; background: rgba(244,63,94,.05); }
+body.renter-dark .rt-drop { border-color: #484f58 !important; background: rgba(255,255,255,.02); }
+body.renter-dark .rt-drop:hover { border-color: var(--rose) !important; background: rgba(244,63,94,.08); }
+body.renter-dark main .bg-slate-200 { color: #e6edf3; }
+
 @media (prefers-reduced-motion: reduce) { body.renter-dark * { transition: none !important; } }
