@@ -34,9 +34,10 @@ class DashboardController extends Controller
 
         return [
             'totalProperties' => (clone $properties)->count(),
-            'totalUnits' => RentalSpace::count(),
-            'availableUnits' => RentalSpace::openForRent()->count(),
-            'occupiedUnits' => RentalSpace::occupied()->count(),
+            // Only units whose property still exists (soft-deleted properties are ignored).
+            'totalUnits' => RentalSpace::whereHas('property')->count(),
+            'availableUnits' => RentalSpace::whereHas('property')->openForRent()->count(),
+            'occupiedUnits' => RentalSpace::whereHas('property')->occupied()->count(),
             'totalTenants' => User::whereHas('role', fn ($q) => $q->where('slug', 'tenant'))->count(),
             'pendingApplications' => RentalApplication::where('status', 'pending')->count(),
             'monthlyRevenue' => Payment::where('status', 'paid')->whereMonth('payment_date', now()->month)->whereYear('payment_date', now()->year)->sum('amount'),
