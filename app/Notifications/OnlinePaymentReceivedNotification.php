@@ -38,6 +38,8 @@ class OnlinePaymentReceivedNotification extends Notification
             'payment_id' => $this->payment->id,
             'amount' => (float) $this->payment->amount,
             'payment_type' => $this->payment->payment_type,
+            'tenant_name' => trim($this->payment->tenant->first_name.' '.$this->payment->tenant->last_name),
+            'property_name' => $this->payment->contract?->property?->name,
         ];
     }
 }

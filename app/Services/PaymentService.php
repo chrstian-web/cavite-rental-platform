@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Payment;
 use App\Models\User;
+use App\Notifications\PaymentDetailsAddedNotification;
 use App\Notifications\PaymentReviewedNotification;
 use App\Notifications\PaymentSubmittedNotification;
 use Illuminate\Http\UploadedFile;
@@ -62,7 +63,7 @@ class PaymentService
      */
     public function addOnlineDetails(Payment $payment, User $tenant, string $referenceNumber, UploadedFile $proof): Payment
     {
-        return DB::transaction(function () use ($payment, $tenant, $referenceNumber, $proof) {
+        $updated = DB::transaction(function () use ($payment, $tenant, $referenceNumber, $proof) {
             $path = $proof->store("payments/{$payment->rental_contract_id}/{$payment->id}", 'local');
 
             $payment->update([
@@ -80,6 +81,16 @@ class PaymentService
 
             return $payment->fresh();
         });
+
+        // Tell the owner/managers so the floating payment alert shows the new proof.
+        $contract = $updated->contract()->with('property.managers', 'owner')->first();
+        collect([$contract->owner])
+            ->merge($contract->property->managers)
+            ->filter()
+            ->unique('id')
+            ->each(fn ($recipient) => $recipient->notify(new PaymentDetailsAddedNotification($updated)));
+
+        return $updated;
     }
 
     /**

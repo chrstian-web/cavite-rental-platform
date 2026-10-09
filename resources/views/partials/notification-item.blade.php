@@ -55,6 +55,26 @@
             },
             route('owner.verification.show'),
         ],
+        'online_payment_received' => [
+            ($data['tenant_name'] ?? 'A tenant').' paid ₱'.number_format($data['amount'] ?? 0, 2).' online'.(! empty($data['property_name']) ? " ({$data['property_name']})" : ''),
+            route('owner.payments.show', $data['payment_id']),
+        ],
+        'payment_submitted' => [
+            ($data['tenant_name'] ?? 'A tenant').' submitted ₱'.number_format((float) ($data['amount'] ?? 0), 2).' for review'.(! empty($data['property_name']) ? " ({$data['property_name']})" : ''),
+            route('owner.payments.show', $data['payment_id']),
+        ],
+        'payment_details_added' => [
+            ($data['tenant_name'] ?? 'A tenant').' added a reference number and screenshot (₱'.number_format($data['amount'] ?? 0, 2).')',
+            route('owner.payments.show', $data['payment_id']),
+        ],
+        'payment_reviewed' => [
+            'Your payment was '.str($data['status'] ?? 'updated')->replace('_', ' '),
+            route('tenant.payments.show', $data['payment_id']),
+        ],
+        'down_payment_requested' => [
+            "Down payment requested for {$data['property_name']}",
+            route('tenant.contracts.show', $data['contract_id']),
+        ],
         default => ['You have a new notification', '#'],
     };
 @endphp

@@ -7,7 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class PaymentSubmittedNotification extends Notification
+class PaymentDetailsAddedNotification extends Notification
 {
     use Queueable;
 
@@ -25,21 +25,23 @@ class PaymentSubmittedNotification extends Notification
         $tenant = $this->payment->tenant;
 
         return (new MailMessage)
-            ->subject('A tenant submitted a payment for review')
-            ->line("{$tenant->first_name} {$tenant->last_name} submitted a payment of ₱".number_format($this->payment->amount, 2).' for review.')
+            ->subject('A tenant added payment proof')
+            ->line("{$tenant->first_name} {$tenant->last_name} added a reference number and screenshot for a ₱".number_format($this->payment->amount, 2).' payment.')
             ->line('Reference number: '.$this->payment->reference_number)
-            ->action('Review payment', url('/owner/payments/'.$this->payment->id));
+            ->action('View payment', url('/owner/payments/'.$this->payment->id));
     }
 
     public function toArray(object $notifiable): array
     {
+        $contract = $this->payment->contract;
+
         return [
-            'type' => 'payment_submitted',
+            'type' => 'payment_details_added',
             'payment_id' => $this->payment->id,
-            'rental_contract_id' => $this->payment->rental_contract_id,
-            'amount' => (string) $this->payment->amount,
+            'amount' => (float) $this->payment->amount,
+            'payment_type' => $this->payment->payment_type,
             'tenant_name' => trim($this->payment->tenant->first_name.' '.$this->payment->tenant->last_name),
-            'property_name' => $this->payment->contract?->property?->name,
+            'property_name' => $contract?->property?->name,
         ];
     }
 }

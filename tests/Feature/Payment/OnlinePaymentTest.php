@@ -8,12 +8,14 @@ use App\Models\RentalContract;
 use App\Models\RentalSpace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class OnlinePaymentTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** @return array{0: User, 1: Payment, 2: User} [tenant, payment, owner] */
     private function payment(): array
     {
         $owner = User::factory()->owner()->create();
@@ -30,73 +32,170 @@ class OnlinePaymentTest extends TestCase
             'currency' => 'PHP', 'due_date' => now()->addMonth(), 'status' => 'pending',
             'payment_source' => 'manual',
         ]);
-        return [$tenant, $payment];
+
+        return [$tenant, $payment, $owner];
     }
 
-    public function test_checkout_uses_server_amount_and_enters_processing(): void
+    private function usePaymongo(): void
     {
-        [$tenant, $payment] = $this->payment();
-
-        $response = $this->actingAs($tenant)->post(route('tenant.payments.checkout', $payment), [
-            'amount' => 1,
+        config([
+            'services.payment_gateway' => 'paymongo',
+            'services.paymongo.secret_key' => 'sk_test_example',
+            'services.paymongo.webhook_secret' => 'whsec_test',
         ]);
-
-        $response->assertRedirect();
-        $payment->refresh();
-        $this->assertSame('processing', $payment->status);
-        $this->assertSame('gateway', $payment->payment_source);
-        $this->assertSame('PHP', $payment->currency);
-        $this->assertSame(8000.0, (float) $payment->amount);
-        $this->assertNotNull($payment->gateway_checkout_id);
     }
 
-    public function test_valid_webhook_marks_payment_paid_and_duplicate_is_idempotent(): void
+    /** Builds the raw body + signature header PayMongo would send. */
+    private function signedWebhook(Payment $payment, string $eventId = 'evt_1', string $secret = 'whsec_test'): array
     {
-        config(['services.paymongo.webhook_secret' => 'test-secret']);
-        [$tenant, $payment] = $this->payment();
-        $this->actingAs($tenant)->post(route('tenant.payments.checkout', $payment));
-        $payment->refresh();
-
-        $payload = [
-            'data' => [
-                'id' => $payment->gateway_checkout_id,
+        $body = json_encode(['data' => [
+            'id' => $eventId,
+            'type' => 'event',
+            'attributes' => [
                 'type' => 'checkout_session.payment.paid',
+                'livemode' => false,
                 'data' => [
                     'id' => $payment->gateway_checkout_id,
                     'attributes' => [
-                        'metadata' => ['payment_id' => (string) $payment->id],
                         'payments' => [[
-                            'id' => 'pay_fake_'.$payment->id,
+                            'id' => 'pay_1',
                             'attributes' => ['amount' => 800000, 'source' => ['type' => 'gcash']],
                         ]],
                     ],
                 ],
             ],
-        ];
+        ]]);
 
-        $first = $this->withHeader('Paymongo-Signature', 'test-secret')
-            ->postJson('/api/v1/payments/webhook/paymongo', $payload);
-        $first->assertOk();
-        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
-        $this->assertDatabaseCount('payment_events', 2);
+        $timestamp = time();
+        $signature = 't='.$timestamp.',te='.hash_hmac('sha256', $timestamp.'.'.$body, $secret);
 
-        $second = $this->withHeader('Paymongo-Signature', 'test-secret')
-            ->postJson('/api/v1/payments/webhook/paymongo', $payload);
-        $second->assertOk()->assertJsonPath('data.duplicate', true);
-        $this->assertDatabaseCount('payment_events', 2);
+        return [$body, $signature];
     }
 
-    public function test_invalid_webhook_cannot_change_payment(): void
+    private function sendWebhook(string $body, string $signature)
     {
-        config(['services.paymongo.webhook_secret' => 'test-secret']);
+        return $this->call('POST', '/api/webhooks/paymongo', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_PAYMONGO_SIGNATURE' => $signature,
+        ], $body);
+    }
+
+    // ── Test (fake) checkout ─────────────────────────────────────
+
+    public function test_pay_online_uses_the_server_amount_and_starts_a_checkout(): void
+    {
         [$tenant, $payment] = $this->payment();
-        $this->actingAs($tenant)->post(route('tenant.payments.checkout', $payment));
+
+        $response = $this->actingAs($tenant)->post(route('tenant.payments.pay-online', $payment), ['amount' => 1]);
+
+        $response->assertRedirect();
+        $this->assertStringContainsString('/fake-payments/', (string) $response->headers->get('Location'));
+
+        $payment->refresh();
+        $this->assertSame('pending', $payment->status);   // not paid until the gateway confirms
+        $this->assertSame('online', $payment->payment_source);
+        $this->assertSame('fake', $payment->gateway);
+        $this->assertSame(8000.0, (float) $payment->amount); // the amount sent by the browser is ignored
+        $this->assertNotNull($payment->gateway_checkout_id);
+    }
+
+    public function test_finishing_the_test_checkout_marks_it_paid_and_returns_to_the_payment_page(): void
+    {
+        [$tenant, $payment, $owner] = $this->payment();
+        $this->actingAs($tenant)->post(route('tenant.payments.pay-online', $payment));
         $payment->refresh();
 
-        $response = $this->withHeader('Paymongo-Signature', 'wrong-secret')
-            ->postJson('/api/v1/payments/webhook/paymongo', ['data' => ['id' => $payment->gateway_checkout_id]]);
-        $response->assertStatus(400);
-        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'processing']);
+        $this->actingAs($tenant)
+            ->post(route('fake-checkout.pay', $payment->gateway_checkout_id))
+            ->assertRedirect(route('tenant.payments.show', $payment).'#payment-details');
+
+        $payment->refresh();
+        $this->assertSame('paid', $payment->status);
+        $this->assertNotNull($payment->paid_at);
+        $this->assertNotNull($payment->receipt_number);
+        $this->assertSame(1, $owner->notifications()->count());
+
+        // Paying again changes nothing and does not notify the owner twice.
+        $this->actingAs($tenant)->post(route('fake-checkout.pay', $payment->gateway_checkout_id));
+        $this->assertSame(1, $owner->fresh()->notifications()->count());
+    }
+
+    public function test_another_tenant_cannot_start_checkout_for_this_payment(): void
+    {
+        [, $payment] = $this->payment();
+        $other = User::factory()->tenant()->create();
+
+        $this->actingAs($other)->post(route('tenant.payments.pay-online', $payment))->assertForbidden();
+    }
+
+    // ── PayMongo webhook ─────────────────────────────────────────
+
+    private function startPaymongoCheckout(User $tenant, Payment $payment): Payment
+    {
+        $this->usePaymongo();
+        Http::fake(['https://api.paymongo.com/*' => Http::response([
+            'data' => ['id' => 'cs_123', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_123']],
+        ])]);
+
+        $this->actingAs($tenant)->post(route('tenant.payments.pay-online', $payment))
+            ->assertRedirect('https://checkout.paymongo.com/cs_123');
+
+        return $payment->fresh();
+    }
+
+    public function test_valid_webhook_marks_payment_paid_and_duplicate_is_idempotent(): void
+    {
+        [$tenant, $payment, $owner] = $this->payment();
+        $payment = $this->startPaymongoCheckout($tenant, $payment);
+        [$body, $signature] = $this->signedWebhook($payment);
+
+        $this->sendWebhook($body, $signature)->assertOk();
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
+        $this->assertDatabaseCount('payment_events', 2); // checkout_created + paid
+        $this->assertSame(1, $owner->notifications()->count());
+
+        // PayMongo retries the same event: acknowledged, but nothing changes.
+        $this->sendWebhook($body, $signature)->assertOk();
+        $this->assertDatabaseCount('payment_events', 2);
+        $this->assertSame(1, $owner->fresh()->notifications()->count());
+    }
+
+    public function test_webhook_with_a_wrong_signature_cannot_change_a_payment(): void
+    {
+        [$tenant, $payment] = $this->payment();
+        $payment = $this->startPaymongoCheckout($tenant, $payment);
+        [$body, $signature] = $this->signedWebhook($payment, 'evt_2', 'not-the-real-secret');
+
+        $this->sendWebhook($body, $signature)->assertStatus(400);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
+
+    public function test_webhook_with_the_wrong_amount_does_not_mark_the_payment_paid(): void
+    {
+        [$tenant, $payment] = $this->payment();
+        $payment = $this->startPaymongoCheckout($tenant, $payment);
+
+        $body = json_encode(['data' => [
+            'id' => 'evt_3', 'type' => 'event',
+            'attributes' => [
+                'type' => 'checkout_session.payment.paid', 'livemode' => false,
+                'data' => ['id' => 'cs_123', 'attributes' => ['payments' => [['id' => 'pay_9', 'attributes' => ['amount' => 100, 'source' => ['type' => 'gcash']]]]]],
+            ],
+        ]]);
+        $timestamp = time();
+        $signature = 't='.$timestamp.',te='.hash_hmac('sha256', $timestamp.'.'.$body, 'whsec_test');
+
+        $this->sendWebhook($body, $signature)->assertOk();
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
+
+    public function test_webhook_is_refused_while_the_fake_gateway_is_active(): void
+    {
+        config(['services.payment_gateway' => 'fake']);
+
+        $this->sendWebhook('{}', 't=1,te=abc')->assertNotFound();
     }
 }
-

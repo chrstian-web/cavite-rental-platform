@@ -143,5 +143,10 @@
             </div>
         </div>
     @endif
+    @auth
+        @unless (auth()->user()->isTenant())
+            @include('partials.payment-alerts')
+        @endunless
+    @endauth
 </body>
 </html>

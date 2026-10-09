@@ -291,4 +291,67 @@ body.renter-dark .rt-drop { border-color: #484f58 !important; background: rgba(2
 body.renter-dark .rt-drop:hover { border-color: var(--rose) !important; background: rgba(244,63,94,.08); }
 body.renter-dark main .bg-slate-200 { color: #e6edf3; }
 
+
+/* ═════════ Floating payment activity panel (owners / managers) ═════════ */
+.pa-root { position: fixed; right: 16px; bottom: 16px; z-index: 80; font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif; }
+.pa-pill { display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border-radius: 999px; border: 0; cursor: pointer;
+    background: #e11d48; color: #fff; font-size: .85rem; font-weight: 700; box-shadow: 0 10px 30px rgba(225,29,72,.35); }
+.pa-pill:hover { background: #be123c; }
+.pa-pulse { animation: pa-pulse 1.6s ease-out 3; }
+@keyframes pa-pulse { 0% { box-shadow: 0 0 0 0 rgba(244,63,94,.6); } 100% { box-shadow: 0 0 0 18px rgba(244,63,94,0); } }
+
+.pa-panel { width: min(400px, calc(100vw - 32px)); max-height: min(72vh, 580px); display: flex; flex-direction: column; overflow: hidden;
+    border-radius: 18px; background: #fff; color: #0f172a; border: 1px solid #e2e8f0; box-shadow: 0 24px 60px rgba(15,23,42,.22); }
+.pa-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #e2e8f0; }
+.pa-head-title { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .95rem; letter-spacing: -.01em; }
+.pa-count { min-width: 22px; height: 22px; padding: 0 7px; display: inline-grid; place-items: center; border-radius: 999px; background: #e11d48; color: #fff; font-size: .72rem; font-weight: 800; }
+.pa-head-actions { display: flex; align-items: center; gap: 6px; }
+.pa-link { background: none; border: 0; padding: 4px 6px; cursor: pointer; font-size: .75rem; font-weight: 700; color: #64748b; }
+.pa-link:hover { color: #e11d48; }
+.pa-icon-btn { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #64748b; cursor: pointer; }
+.pa-icon-btn:hover { background: #f1f5f9; color: #0f172a; }
+
+.pa-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.pa-card { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f1f5f9; }
+.pa-card:last-child { border-bottom: 0; }
+.pa-avatar { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; font-size: .78rem; font-weight: 800; color: #fff; background: #3b82f6; }
+.pa-avatar--online { background: #16a34a; }
+.pa-avatar--review { background: #d97706; }
+.pa-avatar--details { background: #3b82f6; }
+.pa-body { min-width: 0; flex: 1; }
+.pa-headline { margin: 0; font-weight: 800; font-size: .92rem; letter-spacing: -.01em; }
+.pa-sub { margin: 2px 0 0; font-size: .78rem; color: #64748b; }
+.pa-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pa-chip { padding: 3px 9px; border-radius: 999px; font-size: .7rem; font-weight: 700; background: #f1f5f9; color: #475569; }
+.pa-chip--ok { background: #dcfce7; color: #15803d; }
+.pa-chip--warn { background: #fef3c7; color: #b45309; }
+.pa-ref { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 8px; padding: 7px 10px; cursor: pointer; text-align: left;
+    border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; font-size: .78rem; color: inherit; }
+.pa-ref:hover { border-color: #e11d48; }
+.pa-ref-label { font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: .66rem; letter-spacing: .06em; }
+.pa-ref-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pa-ref-copy { font-size: .7rem; font-weight: 800; color: #e11d48; }
+.pa-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.pa-when { font-size: .72rem; color: #94a3b8; }
+.pa-foot-actions { display: flex; align-items: center; gap: 4px; }
+.pa-cta { padding: 6px 14px; border-radius: 9px; background: #e11d48; color: #fff; font-size: .78rem; font-weight: 800; text-decoration: none; }
+.pa-cta:hover { background: #be123c; }
+
+/* Dark theme */
+body.renter-dark .pa-panel { background: #161b22; color: #e6edf3; border-color: #30363d; box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+body.renter-dark .pa-head { border-color: #30363d; }
+body.renter-dark .pa-card { border-color: #21262d; }
+body.renter-dark .pa-link, body.renter-dark .pa-icon-btn { color: #8b949e; }
+body.renter-dark .pa-link:hover { color: #ff7a93; }
+body.renter-dark .pa-icon-btn:hover { background: #21262d; color: #fff; }
+body.renter-dark .pa-sub, body.renter-dark .pa-when { color: #8b949e; }
+body.renter-dark .pa-chip { background: #21262d; color: #c9d1d9; }
+body.renter-dark .pa-chip--ok { background: rgba(63,185,80,.16); color: #7ee787; }
+body.renter-dark .pa-chip--warn { background: rgba(210,153,34,.18); color: #e3b341; }
+body.renter-dark .pa-ref { background: #0d1117; border-color: #484f58; }
+body.renter-dark .pa-ref:hover { border-color: #f43f5e; }
+body.renter-dark .pa-ref-copy { color: #ff7a93; }
+
+@media (prefers-reduced-motion: reduce) { .pa-pulse { animation: none; } }
+
 @media (prefers-reduced-motion: reduce) { body.renter-dark * { transition: none !important; } }

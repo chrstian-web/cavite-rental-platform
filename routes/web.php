@@ -9,6 +9,7 @@ use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FakeCheckoutController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentAlertController;
 use App\Http\Controllers\PaymentDocumentController;
 use App\Http\Controllers\Owner\MaintenanceRequestController as OwnerMaintenanceRequestController;
 use App\Http\Controllers\Owner\OwnerVerificationController;
@@ -57,6 +58,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
+
+    // Floating "Payment activity" panel (owners / managers)
+    Route::get('/payment-alerts', [PaymentAlertController::class, 'index'])->name('payment-alerts.index');
+    Route::post('/payment-alerts/dismiss-all', [PaymentAlertController::class, 'dismissAll'])->name('payment-alerts.dismiss-all');
+    Route::post('/payment-alerts/{id}/dismiss', [PaymentAlertController::class, 'dismiss'])->name('payment-alerts.dismiss');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -112,7 +118,6 @@ Route::middleware('auth')->group(function () {
 
         // Payments (recorded against a contract)
         Route::post('contracts/{contract}/payments', [OwnerPaymentController::class, 'store'])->name('contracts.payments.store');
-
 
         // Payment review queue (tenant-submitted payments)
         Route::get('payments', [OwnerPaymentController::class, 'index'])->name('payments.index');
