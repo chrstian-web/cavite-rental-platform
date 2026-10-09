@@ -41,8 +41,8 @@ class FakeCheckoutController extends Controller
         $this->online->markPaid($payment, 'fake', 'fake_pay_'.$payment->id, 'gcash');
 
         return redirect()
-            ->route('tenant.payments.show', $payment)
-            ->with('status', 'Test payment successful. No real money was charged.');
+            ->to(route('tenant.payments.show', $payment).'#payment-details')
+            ->with('status', 'Test payment successful (no real money was charged). Now add your reference number and screenshot below.');
     }
 
     public function cancel(string $checkout): RedirectResponse

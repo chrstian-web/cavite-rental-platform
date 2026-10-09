@@ -23,7 +23,7 @@ class OnlinePaymentController extends Controller
         try {
             $url = $this->online->startCheckout(
                 $payment,
-                route('tenant.payments.show', [$payment, 'checkout' => 'success']),
+                route('tenant.payments.show', [$payment, 'checkout' => 'success']).'#payment-details',
                 route('tenant.payments.show', [$payment, 'checkout' => 'cancelled']),
             );
         } catch (RequestException|RuntimeException $e) {

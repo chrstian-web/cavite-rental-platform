@@ -56,6 +56,33 @@ class PaymentService
     }
 
     /**
+     * For a payment already confirmed online: stores the tenant's reference
+     * number and payment screenshot so the owner has them on record.
+     * The payment's status does not change.
+     */
+    public function addOnlineDetails(Payment $payment, User $tenant, string $referenceNumber, UploadedFile $proof): Payment
+    {
+        return DB::transaction(function () use ($payment, $tenant, $referenceNumber, $proof) {
+            $path = $proof->store("payments/{$payment->rental_contract_id}/{$payment->id}", 'local');
+
+            $payment->update([
+                'reference_number' => $referenceNumber,
+                'proof_path' => $path,
+                'proof_original_filename' => $proof->getClientOriginalName(),
+            ]);
+
+            $payment->statusHistories()->create([
+                'actor_id' => $tenant->id,
+                'from_status' => $payment->status,
+                'to_status' => $payment->status,
+                'reason' => 'Tenant added reference number and payment screenshot.',
+            ]);
+
+            return $payment->fresh();
+        });
+    }
+
+    /**
      * Owner/manager records that a still-pending payment was received in
      * person (cash, over-the-counter, etc.) without the tenant submitting proof.
      *

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Payment\AddPaymentDetailsRequest;
 use App\Http\Requests\Payment\SubmitPaymentRequest;
 use App\Models\Payment;
 use App\Services\PaymentService;
@@ -61,6 +62,21 @@ class PaymentController extends Controller
         return redirect()
             ->route('tenant.payments.show', $payment)
             ->with('status', 'Payment submitted for review.');
+    }
+
+    /** Reference number + screenshot for a payment that was paid online. */
+    public function addDetails(AddPaymentDetailsRequest $request, Payment $payment): RedirectResponse
+    {
+        $this->payments->addOnlineDetails(
+            $payment,
+            $request->user(),
+            $request->validated('reference_number'),
+            $request->file('proof')
+        );
+
+        return redirect()
+            ->route('tenant.payments.show', $payment)
+            ->with('status', 'Thanks! Your reference number and screenshot were saved.');
     }
 
     public function receipt(Payment $payment)

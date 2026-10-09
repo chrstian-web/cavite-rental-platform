@@ -33,6 +33,18 @@ class PaymentPolicy
     }
 
     /**
+     * Tenant adding their reference number + screenshot to a payment they
+     * already paid online (the gateway confirmed it; this is for the owner's records).
+     */
+    public function addDetails(User $user, Payment $payment): bool
+    {
+        return $user->isTenant()
+            && $payment->user_id === $user->id
+            && $payment->isOnline()
+            && $payment->status === 'paid';
+    }
+
+    /**
      * Owner/manager/super admin recording a payment received in person.
      */
     public function markReceived(User $user, Payment $payment): bool

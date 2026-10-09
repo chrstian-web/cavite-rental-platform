@@ -113,6 +113,7 @@ Route::middleware('auth')->group(function () {
         // Payments (recorded against a contract)
         Route::post('contracts/{contract}/payments', [OwnerPaymentController::class, 'store'])->name('contracts.payments.store');
 
+
         // Payment review queue (tenant-submitted payments)
         Route::get('payments', [OwnerPaymentController::class, 'index'])->name('payments.index');
         Route::get('payments/{payment}', [OwnerPaymentController::class, 'show'])->name('payments.show');
@@ -145,6 +146,7 @@ Route::middleware('auth')->group(function () {
         Route::get('payments', [TenantPaymentController::class, 'index'])->name('payments.index');
         Route::get('payments/{payment}', [TenantPaymentController::class, 'show'])->name('payments.show');
         Route::post('payments/{payment}', [TenantPaymentController::class, 'store'])->name('payments.store');
+        Route::post('payments/{payment}/details', [TenantPaymentController::class, 'addDetails'])->name('payments.details');
         Route::post('payments/{payment}/pay-online', [TenantOnlinePaymentController::class, 'checkout'])->name('payments.pay-online');
         Route::get('payments/{payment}/receipt', [TenantPaymentController::class, 'receipt'])->name('payments.receipt');
 
