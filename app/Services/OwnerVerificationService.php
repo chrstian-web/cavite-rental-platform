@@ -135,9 +135,10 @@ class OwnerVerificationService
 
         $verification->documents()->update(['status' => 'verified', 'verified_at' => now()]);
 
-        // Approval is intentionally distinct from the final owner verification
-        // state; the follow-up verification step promotes this to `verified`.
-        $verification->user->update(['owner_verification_status' => 'approved']);
+        // Approval by the admin is the final step: the owner becomes `verified`
+        // right away and gets full access to owner features. (The record in
+        // owner_verifications keeps status `approved`.)
+        $verification->user->update(['owner_verification_status' => 'verified']);
         $verification->user->notify(new OwnerVerificationResultNotification($verification));
 
         return $verification->fresh();

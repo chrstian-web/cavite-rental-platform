@@ -148,6 +148,7 @@ class User extends Authenticatable
             return true;
         }
 
-        return $this->owner_verification_status === 'verified';
+        // 'approved' is what older approvals were saved as; it means the same thing.
+        return in_array($this->owner_verification_status, ['verified', 'approved'], true);
     }
 }

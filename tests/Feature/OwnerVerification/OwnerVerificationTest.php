@@ -135,10 +135,18 @@ class OwnerVerificationTest extends TestCase
 
         $response->assertRedirect();
         $this->assertDatabaseHas('owner_verifications', ['id' => $verification->id, 'status' => 'approved']);
-        $this->assertEquals('approved', $owner->fresh()->owner_verification_status);
+        $this->assertEquals('verified', $owner->fresh()->owner_verification_status);
 
-        // Approved is NOT the same as verified — OTP (Step 20) still gates full access.
-        $this->assertFalse($owner->fresh()->isOwnerVerified());
+        // Admin approval gives the owner full access straight away.
+        $this->assertTrue($owner->fresh()->isOwnerVerified());
+    }
+
+    public function test_an_owner_approved_under_the_old_flow_still_has_full_access(): void
+    {
+        $owner = User::factory()->owner()->create(['owner_verification_status' => 'approved']);
+
+        $this->assertTrue($owner->isOwnerVerified());
+        $this->actingAs($owner)->get('/owner/properties')->assertOk();
     }
 
     public function test_super_admin_can_reject_a_verification_with_a_reason(): void
