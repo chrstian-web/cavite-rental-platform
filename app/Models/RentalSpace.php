@@ -70,6 +70,36 @@ class RentalSpace extends Model
         return $active > 0 || $this->status === 'occupied';
     }
 
+    /** Active contracts on this space (uses the withCount alias when the list was loaded with it). */
+    public function activeContractsCount(): int
+    {
+        return (int) ($this->active_contracts_count
+            ?? $this->rentalContracts()->where('status', 'active')->count());
+    }
+
+    /** Beds/slots still free: capacity minus the larger of the tracked and the contract-based count. */
+    public function spotsLeft(): int
+    {
+        $taken = max($this->activeContractsCount(), (int) $this->occupied_capacity);
+
+        return max(0, (int) $this->total_capacity - $taken);
+    }
+
+    /** Full means no capacity is left, or the owner/system flagged the space occupied. */
+    public function isFull(): bool
+    {
+        return $this->status === 'occupied' || $this->spotsLeft() <= 0;
+    }
+
+    /**
+     * A shared room with some beds taken is still open. Only an `available`
+     * space with capacity left accepts applications.
+     */
+    public function acceptsApplications(): bool
+    {
+        return $this->status === 'available' && ! $this->isFull();
+    }
+
     public function scopeAvailable($query)
     {
         return $query->where('status', 'available');

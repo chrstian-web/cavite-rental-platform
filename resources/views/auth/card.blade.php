@@ -4,8 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $mode === 'register' ? 'Create Account' : 'Sign In' }} · Cavite Rentals</title>
-    <link rel="stylesheet" href="{{ asset('css/auth-card.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/auth-card.css') }}?v={{ @filemtime(public_path('css/auth-card.css')) }}">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @include('partials.pwa')
 </head>
 <body class="auth-page">
 
@@ -112,8 +113,12 @@
 
     {{-- Fallback toggle for narrow/mobile screens, where the overlay is hidden --}}
     <p class="mobile-toggle">
-        <a href="{{ route($activePanel === 'register' ? 'login' : 'register') }}" class="small-link">
-            {{ $activePanel === 'register' ? 'Already have an account? Sign in' : "Don't have an account? Sign up" }}
+        <a href="{{ route($activePanel === 'register' ? 'login' : 'register') }}" class="mobile-toggle__link">
+            <span class="mobile-toggle__text">{{ $activePanel === 'register' ? 'Already have an account?' : "Don't have an account?" }}</span>
+            <span class="mobile-toggle__action">
+                {{ $activePanel === 'register' ? 'Sign in' : 'Sign up' }}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </span>
         </a>
     </p>
 

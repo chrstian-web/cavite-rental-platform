@@ -9,22 +9,28 @@
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white border border-slate-200 rounded-xl p-6">
                 <h1 class="text-lg font-semibold text-slate-900 mb-1">
-                    {{ $verification->user->first_name }} {{ $verification->user->last_name }}
+                    {{ $verification->user?->first_name ?? 'Deleted user' }} {{ $verification->user?->last_name }}
                 </h1>
-                <p class="text-sm text-slate-500 mb-4">{{ $verification->user->email }} &middot; Submitted {{ $verification->submitted_at->format('M j, Y g:i A') }}</p>
+                <p class="text-sm text-slate-500 mb-4">{{ $verification->user?->email }} &middot; Submitted {{ $verification->submitted_at->format('M j, Y g:i A') }}</p>
 
                 <p class="text-sm font-medium text-slate-700 mb-2">Submitted documents</p>
+                @if ($verification->files_purged_at)
+                    <p class="text-sm text-slate-500 mb-3">Uploaded files were permanently deleted on {{ $verification->files_purged_at->format('M j, Y') }}. The decision record is kept.</p>
+                @endif
+                <div class="mb-3 @if($verification->documents->isEmpty()) hidden @endif">
+                    @include('partials.document-viewer', ['items' => \App\Support\DocumentViewerItems::fromVerification($verification->documents), 'id' => 'owner-docs'])
+                </div>
                 <div class="space-y-2">
                     @foreach ($verification->documents as $doc)
-                        <div class="flex items-center justify-between border border-slate-100 rounded-lg p-3 text-sm">
-                            <div>
+                        <div class="flex items-center justify-between gap-3 border border-slate-100 rounded-lg p-3 text-sm">
+                            <div class="min-w-0">
                                 <p class="text-slate-900">{{ str($doc->document_type)->replace('_',' ')->title() }}</p>
-                                <p class="text-xs text-slate-400">
-                                    {{ $doc->original_filename }}
-                                    @if ($doc->expiration_date) &middot; expires {{ $doc->expiration_date->format('M j, Y') }} @endif
-                                </p>
+                                @if ($doc->expiration_date)
+                                    <p class="text-xs text-slate-400">Expires {{ $doc->expiration_date->format('M j, Y') }}</p>
+                                @endif
                             </div>
-                            <a href="{{ route('verification-documents.download', $doc) }}" class="text-blue-600 hover:underline text-xs">View Document</a>
+                            <button type="button" @click="$dispatch('open-docs', { id: 'owner-docs', index: {{ $loop->index }} })"
+                                    class="shrink-0 text-blue-600 hover:underline text-xs">View</button>
                         </div>
                     @endforeach
                 </div>
@@ -61,7 +67,7 @@
                     'needs_additional_documents' => 'bg-amber-50 text-amber-700',
                     default => 'bg-blue-50 text-blue-700',
                 } }}">
-                {{ str($verification->status)->replace('_',' ')->title() }}
+                {{ $verification->status === 'rejected' ? 'Declined' : str($verification->status)->replace('_',' ')->title() }}
             </span>
 
             @if ($verification->status === 'needs_review')
@@ -80,8 +86,8 @@
 
                     <form method="POST" action="{{ route('admin.owner-verifications.reject', $verification) }}">
                         @csrf @method('PATCH')
-                        <textarea name="rejection_reason" rows="2" placeholder="Reason for rejection (required)" required class="w-full rounded-lg border-slate-300 text-sm mb-2"></textarea>
-                        <button class="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg py-2">Reject</button>
+                        <textarea name="rejection_reason" rows="2" placeholder="Reason for declining (required)" required class="w-full rounded-lg border-slate-300 text-sm mb-2"></textarea>
+                        <button class="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg py-2">Decline</button>
                     </form>
                 </div>
             @else
@@ -90,6 +96,34 @@
                     @if ($verification->reviewer) by {{ $verification->reviewer->first_name }} {{ $verification->reviewer->last_name }} @endif
                     on {{ $verification->reviewed_at?->format('M j, Y') }}.
                 </p>
+            @endif
+
+            @if ($verification->status !== 'needs_review')
+                <div class="mt-5 pt-4 border-t border-slate-100 space-y-3">
+                    <p class="text-sm font-medium text-slate-700">Housekeeping</p>
+
+                    @if ($verification->status === 'rejected' && ! $verification->files_purged_at && $verification->documents->isNotEmpty())
+                        <form method="POST" action="{{ route('admin.owner-verifications.purge-files', $verification) }}"
+                              onsubmit="return confirm('Permanently delete the uploaded files (including the government ID)? This cannot be undone. The decision record is kept.')">
+                            @csrf @method('DELETE')
+                            <button class="w-full border border-red-300 text-red-600 hover:bg-red-50 text-sm font-medium rounded-lg py-2">Delete uploaded files</button>
+                            <p class="text-xs text-slate-400 mt-1">Recommended for declined applications once you no longer need the documents.</p>
+                        </form>
+                    @endif
+
+                    @if ($verification->isArchived())
+                        <form method="POST" action="{{ route('admin.owner-verifications.unarchive', $verification) }}">
+                            @csrf @method('PATCH')
+                            <button class="w-full border border-slate-300 text-sm font-medium rounded-lg py-2">Restore from archive</button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('admin.owner-verifications.archive', $verification) }}"
+                              onsubmit="return confirm('Archive this submission? It will be hidden from the list but kept on record.')">
+                            @csrf @method('PATCH')
+                            <button class="w-full border border-slate-300 text-sm font-medium rounded-lg py-2">Archive</button>
+                        </form>
+                    @endif
+                </div>
             @endif
         </div>
     </div>

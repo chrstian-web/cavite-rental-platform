@@ -1,0 +1,72 @@
+/* Cavite Rentals onboarding: welcome popup, tour, guide popup and guide panel.
+   Own colours on purpose: the dark theme only recolours text inside <main>, and these sit outside it. */
+/* Own colours: the dark theme only recolours text inside <main>, and these sit outside it. */
+.ob-title { color: #0f172a; }
+.ob-lead  { color: #475569; }
+.ob-text  { color: #334155; }
+.ob-faint { color: #64748b; }
+.ob-link:hover { text-decoration: underline; }
+.ob-card  { border: 1px solid #cbd5e1; box-shadow: 0 24px 70px rgba(15,23,42,.35); }
+.ob-btn { display: inline-flex; align-items: center; justify-content: center; padding: 11px 20px; border-radius: 10px;
+          font-size: .9rem; font-weight: 700; line-height: 1.2; cursor: pointer; border: 1px solid transparent; transition: background .15s, border-color .15s; }
+.ob-btn-sm { padding: 8px 16px; font-size: .85rem; }
+.ob-btn-primary { background: #e11d48; color: #fff; }
+.ob-btn-primary:hover { background: #be123c; }
+.ob-btn-ghost { background: #fff; color: #334155; border-color: #cbd5e1; }
+.ob-btn-ghost:hover { background: #f1f5f9; border-color: #94a3b8; }
+.ob-btn:focus-visible, .ob-link:focus-visible { outline: 3px solid #fda4af; outline-offset: 2px; }
+
+body.renter-dark .ob-title { color: #ffffff; }
+body.renter-dark .ob-lead  { color: #d0d7de; }
+body.renter-dark .ob-text  { color: #eef2f6; }
+body.renter-dark .ob-faint { color: #a9b4c0; }
+body.renter-dark .ob-card  { background: #1c232d !important; border-color: #57606a; box-shadow: 0 24px 70px rgba(0,0,0,.55), 0 0 0 1px rgba(244,63,94,.28); }
+body.renter-dark .ob-btn-ghost { background: rgba(255,255,255,.07); color: #fff; border-color: #6e7781; }
+body.renter-dark .ob-btn-ghost:hover { background: rgba(255,255,255,.14); border-color: #a9b4c0; }
+
+@media (prefers-reduced-motion: reduce) { #ob-spot { transition: none !important; } }
+#ob-welcome.ob-open { display: flex; }
+#ob-tour:not(.hidden) { display: block; }
+
+.ob-card { background: #ffffff; }
+body.renter-dark .ob-card { background: #1c232d; }
+
+#ob-welcome.ob-open, #ob-guide.ob-open { display: flex; }
+#ob-tour:not(.hidden) { display: block; }
+
+/* Numbered steps (guide popup + panel) */
+.ob-steps { list-style: none; margin: 0; padding: 0; counter-reset: ob; }
+.ob-steps li { counter-increment: ob; display: flex; gap: 12px; align-items: flex-start; padding: 7px 0; }
+.ob-steps li::before { content: counter(ob); flex: 0 0 24px; height: 24px; border-radius: 9999px; background: #e11d48; color: #fff;
+                       font-size: .75rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.ob-steps li span { font-size: .92rem; line-height: 1.45; }
+
+.ob-icon-btn { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+               background: transparent; border: 0; color: inherit; }
+.ob-icon-btn:hover { background: rgba(148,163,184,.25); }
+.ob-icon-btn:focus-visible { outline: 3px solid #fda4af; outline-offset: 1px; }
+
+/* Appreciation card: replaces the "Getting started" checklist once every step is done. */
+.ob-thanks { position: relative; overflow: hidden; text-align: center; border: 1px solid rgba(244,63,94,.35); }
+.ob-thanks-in { animation: ob-thanks-in .5s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes ob-thanks-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+.ob-thanks-badge { width: 60px; height: 60px; margin: 0 auto 14px; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+                   background: linear-gradient(135deg, #fb7185, #e11d48); color: #fff; box-shadow: 0 10px 28px rgba(225,29,72,.38); }
+.ob-thanks-badge svg { width: 30px; height: 30px; }
+.ob-thanks-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+.ob-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.ob-confetti i { position: absolute; top: -14px; width: 8px; height: 14px; border-radius: 2px; opacity: 0; animation: ob-fall 2.8s ease-in forwards; }
+.ob-confetti i:nth-child(1) { left: 6%; background: #fb923c; animation-delay: 0.40s; }
+.ob-confetti i:nth-child(2) { left: 14%; background: #fbbf24; animation-delay: 0.25s; }
+.ob-confetti i:nth-child(3) { left: 23%; background: #34d399; animation-delay: 0.10s; }
+.ob-confetti i:nth-child(4) { left: 31%; background: #60a5fa; animation-delay: 0.45s; }
+.ob-confetti i:nth-child(5) { left: 40%; background: #a78bfa; animation-delay: 0.30s; }
+.ob-confetti i:nth-child(6) { left: 49%; background: #f43f5e; animation-delay: 0.15s; }
+.ob-confetti i:nth-child(7) { left: 58%; background: #fb923c; animation-delay: 0.50s; }
+.ob-confetti i:nth-child(8) { left: 67%; background: #fbbf24; animation-delay: 0.35s; }
+.ob-confetti i:nth-child(9) { left: 76%; background: #34d399; animation-delay: 0.20s; }
+.ob-confetti i:nth-child(10) { left: 84%; background: #60a5fa; animation-delay: 0.05s; }
+.ob-confetti i:nth-child(11) { left: 92%; background: #a78bfa; animation-delay: 0.40s; }
+.ob-confetti i:nth-child(12) { left: 97%; background: #f43f5e; animation-delay: 0.25s; }
+@keyframes ob-fall { 0% { opacity: 0; transform: translateY(0) rotate(0); } 12% { opacity: 1; } 100% { opacity: 0; transform: translateY(210px) rotate(320deg); } }
+@media (prefers-reduced-motion: reduce) { .ob-thanks-in { animation: none; } .ob-confetti { display: none; } }

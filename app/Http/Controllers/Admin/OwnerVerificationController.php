@@ -19,7 +19,12 @@ class OwnerVerificationController extends Controller
     {
         $verifications = OwnerVerification::query()
             ->with('user')
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->whereHas('user', fn ($q) => $q->withoutTrashed())
+            ->when(
+                $request->string('status')->toString() === 'archived',
+                fn ($q) => $q->archived(),
+                fn ($q) => $q->active()->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status'))),
+            )
             ->latest('submitted_at')
             ->paginate(15);
 
@@ -57,7 +62,31 @@ class OwnerVerificationController extends Controller
 
         $this->verifications->reject($ownerVerification, $request->user(), $request->string('rejection_reason'));
 
-        return back()->with('status', 'Owner verification rejected.');
+        return back()->with('status', 'Owner verification declined.');
+    }
+
+    public function archive(OwnerVerification $ownerVerification): RedirectResponse
+    {
+        // Never hide something that is still waiting on an admin decision.
+        abort_if($ownerVerification->status === 'needs_review', 422, 'Review this submission before archiving it.');
+
+        $ownerVerification->update(['archived_at' => now()]);
+
+        return redirect()->route('admin.owner-verifications.index')->with('status', 'Submission archived.');
+    }
+
+    public function unarchive(OwnerVerification $ownerVerification): RedirectResponse
+    {
+        $ownerVerification->update(['archived_at' => null]);
+
+        return back()->with('status', 'Submission restored.');
+    }
+
+    public function purgeFiles(OwnerVerification $ownerVerification): RedirectResponse
+    {
+        $this->verifications->purgeFiles($ownerVerification->load('documents'));
+
+        return back()->with('status', 'Uploaded files deleted. The decision record was kept.');
     }
 
     public function requestMoreDocuments(Request $request, OwnerVerification $ownerVerification): RedirectResponse

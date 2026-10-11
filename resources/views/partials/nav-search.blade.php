@@ -1,4 +1,4 @@
-<div x-data="{ open: false }" class="relative">
+<div x-data="{ open: false }" class="relative" data-tour="nav-search">
     <button @click="open = !open" @click.outside="open = false" title="Search properties"
         class="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

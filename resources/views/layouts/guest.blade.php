@@ -6,11 +6,12 @@
     <title>@yield('title', 'Cavite Rental Platform')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     @include('partials.form-fields')
+    @include('partials.pwa')
 </head>
 <body class="min-h-screen bg-slate-50 flex items-center justify-center px-4">
     <div class="w-full max-w-md">
         <div class="text-center mb-6">
-            <a href="{{ route('home') }}" class="text-2xl font-bold text-slate-900">Cavite<span class="text-blue-600">Rentals</span></a>
+            <a href="{{ auth()->check() ? route('dashboard') : route('home') }}" class="text-2xl font-bold text-slate-900">Cavite<span class="text-blue-600">Rentals</span></a>
         </div>
         <div class="bg-white shadow-sm border border-slate-200 rounded-xl p-8">
             @yield('content')

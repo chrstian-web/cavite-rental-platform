@@ -10,8 +10,10 @@
         @include('partials.landing-mascots')
     </div>
 
+    @include('partials.onboarding-checklist')
+
     @if ($availableProperties->isNotEmpty())
-        <div class="mb-8">
+        <div class="mb-8" data-tour="homes">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-lg font-extrabold text-slate-950">Homes available to rent</h2>
                 <a href="{{ route('properties.index') }}" class="text-sm text-rose-600 hover:underline font-bold">View all →</a>
@@ -56,7 +58,21 @@
         </div>
 
         <div class="space-y-6">
-            <div class="surface-card p-6"><p class="eyebrow mb-2">Upcoming payment</p>@if ($upcomingPayment)<p class="text-2xl font-extrabold text-slate-950">₱{{ number_format($upcomingPayment->amount, 2) }}</p><p class="text-xs text-slate-400 mt-1">Due {{ $upcomingPayment->due_date->format('M j, Y') }}</p>@else<p class="text-sm text-slate-400">Nothing due right now.</p>@endif</div>
+            {{-- Anything pending that is not a monthly rent installment (e.g. down payment) --}}
+            @if ($upcomingPayment && ($upcomingPayment->payment_type !== 'monthly_rent' || ! $rentSchedule))
+                <div class="surface-card p-6">
+                    <p class="eyebrow mb-2">Upcoming payment</p>
+                    <p class="text-2xl font-extrabold text-slate-950">₱{{ number_format($upcomingPayment->amount, 2) }}</p>
+                    <p class="text-xs text-slate-400 mt-1">{{ $upcomingPayment->typeLabel() }} · Due {{ $upcomingPayment->due_date->format('M j, Y') }}</p>
+                    <a href="{{ route('tenant.payments.show', $upcomingPayment) }}" class="inline-block mt-3 text-sm font-bold text-rose-600 hover:underline">Pay now →</a>
+                </div>
+            @endif
+
+            @if ($activeContract && $rentSchedule && $rentSchedule['total'] > 0)
+                @include('partials.rent-schedule', ['contract' => $activeContract, 'schedule' => $rentSchedule])
+            @elseif (! $upcomingPayment)
+                <div class="surface-card p-6"><p class="eyebrow mb-2">Upcoming payment</p><p class="text-sm text-slate-400">Nothing due right now.</p></div>
+            @endif
             <div class="rt-cta rounded-2xl p-6"><p class="rt-cta-title text-sm font-bold mb-1">Find a better fit</p><p class="rt-cta-text text-xs mb-4">Get properties scored against your exact preferences.</p><a href="{{ route('tenant.recommendations.create') }}" class="rt-cta-btn inline-block text-sm font-bold rounded-xl px-4 py-2.5 transition">Get recommendations</a></div>
             <div class="surface-card p-6"><p class="eyebrow mb-1">Favorites</p><p class="text-3xl font-extrabold text-slate-950">{{ $favoritesCount }}</p><a href="{{ route('tenant.favorites.index') }}" class="text-sm text-rose-600 hover:underline font-bold">View favorites →</a></div>
         </div>

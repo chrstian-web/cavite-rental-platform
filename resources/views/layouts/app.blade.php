@@ -14,6 +14,7 @@
     @if (auth()->check())
         @include('partials.theme-head')
     @endif
+    @include('partials.pwa')
 </head>
 <body class="min-h-screen bg-slate-50 {{ auth()->check() ? 'renter-dark' : '' }}">
     @if (auth()->check())
@@ -26,7 +27,7 @@
 
                 {{-- Desktop nav links, grouped into dropdowns per role --}}
                 <div class="hidden md:flex items-center gap-6">
-                    @if (in_array(auth()->user()->role->slug, ['owner', 'manager', 'super_admin']))
+                    @if (in_array(auth()->user()->role->slug, ['owner', 'manager']))
                         @include('partials.nav-link', ['route' => 'owner.properties.index', 'label' => 'My Properties', 'notifyTypes' => 'property_verification'])
                         @include('partials.nav-dropdown', ['label' => 'Rentals', 'links' => [
                             ['route' => 'owner.applications.index', 'label' => 'Applications', 'notifyTypes' => 'new_rental_application'],
@@ -58,7 +59,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2.5 sm:gap-4">
                 @include('partials.nav-search')
                 @include('partials.notification-bell')
                 @include('partials.profile-dropdown')
@@ -66,7 +67,7 @@
                 @include('partials.theme-toggle')
 
                 {{-- Mobile hamburger --}}
-                <button @click="mobileOpen = !mobileOpen" class="md:hidden text-slate-600">
+                <button @click="mobileOpen = !mobileOpen" class="md:hidden text-slate-600" data-tour="nav-menu" aria-label="Open menu">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                         <path x-show="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                         <path x-show="mobileOpen" x-cloak stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -77,7 +78,7 @@
 
         {{-- Mobile menu: flat list of every link, since nested dropdowns are awkward on small screens --}}
         <div x-show="mobileOpen" x-cloak x-transition class="md:hidden border-t border-slate-100 px-4 py-3 space-y-2">
-            @if (in_array(auth()->user()->role->slug, ['owner', 'manager', 'super_admin']))
+            @if (in_array(auth()->user()->role->slug, ['owner', 'manager']))
                 <a href="{{ route('owner.properties.index') }}" class="block text-sm text-slate-600 py-1">My Properties</a>
                 <a href="{{ route('owner.applications.index') }}" class="block text-sm text-slate-600 py-1">Applications</a>
                 <a href="{{ route('owner.viewings.index') }}" class="block text-sm text-slate-600 py-1">Viewing Requests</a>
@@ -108,7 +109,48 @@
         @yield('content')
     </main>
 
+    @if (auth()->check() && ! auth()->user()->isSuperAdmin())
+        @include('partials.onboarding-guide')
+    @endif
+    @if (auth()->check() && request()->routeIs('dashboard') && ! auth()->user()->isSuperAdmin())
+        @include('partials.onboarding')
+    @endif
+
     @stack('scripts')
+
+    <script>
+        // Phones: turn list tables into stacked cards. Each cell is labelled from its column header.
+        (function () {
+            document.querySelectorAll('main table:not([data-no-stack])').forEach(function (table) {
+                var heads = Array.prototype.map.call(table.querySelectorAll('thead th'), function (th) { return th.textContent.trim(); });
+                if (!heads.length) return;
+                table.classList.add('rt-stack');
+                table.querySelectorAll('tbody tr').forEach(function (tr) {
+                    Array.prototype.forEach.call(tr.children, function (td, i) {
+                        if (td.colSpan > 1) { td.classList.add('rt-span'); return; }
+                        td.setAttribute('data-label', heads[i] || '');
+
+                        // A cell with several pieces (action links + delete form, name + email, text + badge)
+                        // must be ONE flex item on phones, otherwise each piece becomes its own squeezed column.
+                        var pieces = Array.prototype.filter.call(td.childNodes, function (n) {
+                            return n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim() !== '');
+                        });
+                        if (pieces.length > 1) {
+                            var wrap = document.createElement('div');
+                            wrap.className = (heads[i] || '') === '' ? 'rt-actions' : 'rt-cell';
+                            while (td.firstChild) wrap.appendChild(td.firstChild);
+                            td.appendChild(wrap);
+                        } else if ((heads[i] || '') === '' && pieces.length === 1) {
+                            var only = document.createElement('div');
+                            only.className = 'rt-actions';
+                            while (td.firstChild) only.appendChild(td.firstChild);
+                            td.appendChild(only);
+                        }
+                    });
+                });
+            });
+        })();
+    </script>
 
     @include('partials.theme-script')
 
@@ -144,9 +186,7 @@
         </div>
     @endif
     @auth
-        @unless (auth()->user()->isTenant())
-            @include('partials.payment-alerts')
-        @endunless
+        @include('partials.notification-alerts')
     @endauth
 </body>
 </html>

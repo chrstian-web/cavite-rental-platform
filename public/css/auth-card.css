@@ -273,10 +273,31 @@ body.auth-page::after {
     .auth-container select,
     .auth-container button.submit-btn { width: 100%; }
 
-    .mobile-toggle { display: block !important; text-align: center; padding: 18px 0 0; }
+    .mobile-toggle { display: block !important; width: 100%; max-width: 420px; margin: 16px auto 0; padding: 0; }
 }
 
+/* Mobile "Sign in / Sign up" switch: a tappable card instead of a plain underlined link */
 .mobile-toggle { display: none; }
+.mobile-toggle__link {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px; border-radius: 14px; text-decoration: none;
+    background: linear-gradient(135deg, rgba(244, 63, 94, .10), rgba(244, 63, 94, .02)), var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .28);
+    transition: border-color .2s ease, transform 80ms ease-in, box-shadow .2s ease;
+}
+.mobile-toggle__link:hover { border-color: var(--rose); box-shadow: 0 8px 22px rgba(244, 63, 94, .16); }
+.mobile-toggle__link:active { transform: scale(.985); }
+.mobile-toggle__link:focus-visible { outline: 3px solid rgba(244, 63, 94, .45); outline-offset: 2px; }
+.mobile-toggle__text { color: var(--muted); font-size: 13.5px; font-weight: 500; line-height: 1.3; }
+.mobile-toggle__action {
+    flex: none; display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px; background: var(--rose-d); color: #fff;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.mobile-toggle__action svg { width: 15px; height: 15px; transition: transform .2s ease; }
+.mobile-toggle__link:hover .mobile-toggle__action svg { transform: translateX(3px); }
+
 
 @media (prefers-reduced-motion: reduce) {
     .form-container, .overlay-container, .overlay, .overlay-panel { transition: none; }

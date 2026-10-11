@@ -2,7 +2,7 @@
      Usage: @include('partials.nav-dropdown', ['label' => 'Rentals', 'notifyTypes' => [...] optional])
             then push <a> links into the $slot via @section/@include pattern below,
             OR simply wrap with @component-style — here we accept a $links array of ['route'=>, 'label'=>, 'notifyTypes'=>optional] --}}
-<div x-data="{ open: false }" class="relative">
+<div x-data="{ open: false }" class="relative" data-tour="nav-{{ \Illuminate\Support\Str::slug($label) }}">
     <button @click="open = !open" @click.outside="open = false"
         class="relative flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900">
         @if (collect($links)->contains(fn ($l) => isset($l['notifyTypes']) && auth()->user()->hasUnreadNotificationOfType($l['notifyTypes'])))

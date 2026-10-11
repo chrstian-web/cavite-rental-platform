@@ -3,7 +3,7 @@
     $unreadCount = auth()->user()->unreadNotifications()->count();
 @endphp
 
-<div x-data="{ open: false }" class="relative">
+<div x-data="{ open: false }" class="relative" data-tour="notifications">
     <button @click="open = !open" @click.outside="open = false" class="relative text-slate-500 hover:text-slate-900">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0m6 0H9" />

@@ -39,15 +39,7 @@
             @if ($application->documents->isNotEmpty())
                 <div class="mt-4 pt-4 border-t border-slate-100">
                     <p class="text-sm font-medium text-slate-700 mb-2">Submitted documents</p>
-                    <ul class="text-sm space-y-1">
-                        @foreach ($application->documents as $doc)
-                            <li>
-                                <a href="{{ route('documents.download', $doc) }}" class="text-blue-600 hover:underline">
-                                    {{ $doc->label }} — {{ $doc->original_filename }}
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
+                    @include('partials.document-viewer', ['items' => \App\Support\DocumentViewerItems::fromApplication($application->documents)])
                 </div>
             @else
                 <p class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-400">No documents submitted.</p>

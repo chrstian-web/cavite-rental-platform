@@ -29,6 +29,24 @@ class OwnerVerificationService
     ];
 
     /**
+     * Permanently deletes the uploaded files (government ID etc.) of a DECLINED
+     * submission. The decision record itself (who, when, reason) is kept.
+     */
+    public function purgeFiles(OwnerVerification $verification): void
+    {
+        abort_unless($verification->status === 'rejected', 422, 'Only declined submissions can have their files deleted.');
+
+        DB::transaction(function () use ($verification) {
+            foreach ($verification->documents as $doc) {
+                \Illuminate\Support\Facades\Storage::disk('local')->delete($doc->file_path);
+            }
+
+            $verification->documents()->delete();
+            $verification->update(['files_purged_at' => now()]);
+        });
+    }
+
+    /**
      * @param  array<string, UploadedFile>  $documents  keyed by document_type
      * @param  array<string, string>  $expirationDates  keyed by document_type, optional
      */

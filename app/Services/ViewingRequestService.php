@@ -41,6 +41,10 @@ class ViewingRequestService
         if ($data['status'] === 'rescheduled') {
             $updateData['preferred_date'] = $data['preferred_date'];
             $updateData['preferred_time'] = $data['preferred_time'];
+            $updateData['reschedule_reason'] = trim($data['reschedule_reason']);
+        } else {
+            // The reason only belongs to the reschedule it explained.
+            $updateData['reschedule_reason'] = null;
         }
 
         $viewing->update($updateData);

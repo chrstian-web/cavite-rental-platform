@@ -37,6 +37,8 @@ class StoreHotspotRequest extends FormRequest
             ],
             'label' => ['nullable', 'string', 'max:100'],
             'type' => ['required', 'in:navigation,info'],
+            // Arrow diameter in px (small ~ 24, default 56, large ~ 140).
+            'size' => ['nullable', 'integer', 'between:24,140'],
         ];
     }
 }

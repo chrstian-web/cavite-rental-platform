@@ -8,8 +8,9 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FakeCheckoutController;
+use App\Http\Controllers\NotificationAlertController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\PaymentAlertController;
 use App\Http\Controllers\PaymentDocumentController;
 use App\Http\Controllers\Owner\MaintenanceRequestController as OwnerMaintenanceRequestController;
 use App\Http\Controllers\Owner\OwnerVerificationController;
@@ -55,14 +56,20 @@ Route::get('/properties/{property}/virtual-tour/{tour}/scenes/{scene}/panorama',
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
+    // First-time user guidance (welcome popup, guided tour, getting-started checklist)
+    Route::post('/onboarding/welcome', [OnboardingController::class, 'welcome'])->name('onboarding.welcome');
+    Route::post('/onboarding/tour-completed', [OnboardingController::class, 'tourCompleted'])->name('onboarding.tour-completed');
+    Route::post('/onboarding/checklist/dismiss', [OnboardingController::class, 'dismissChecklist'])->name('onboarding.checklist.dismiss');
+    Route::post('/onboarding/restart', [OnboardingController::class, 'restart'])->name('onboarding.restart');
+
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
 
-    // Floating "Payment activity" panel (owners / managers)
-    Route::get('/payment-alerts', [PaymentAlertController::class, 'index'])->name('payment-alerts.index');
-    Route::post('/payment-alerts/dismiss-all', [PaymentAlertController::class, 'dismissAll'])->name('payment-alerts.dismiss-all');
-    Route::post('/payment-alerts/{id}/dismiss', [PaymentAlertController::class, 'dismiss'])->name('payment-alerts.dismiss');
+    // Floating notification panel feed (admin, owner/manager and renter)
+    Route::get('/notification-alerts', [NotificationAlertController::class, 'index'])->name('alerts.index');
+    Route::post('/notification-alerts/dismiss-all', [NotificationAlertController::class, 'dismissAll'])->name('alerts.dismiss-all');
+    Route::post('/notification-alerts/{id}/dismiss', [NotificationAlertController::class, 'dismiss'])->name('alerts.dismiss');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -97,6 +104,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('properties/{property}/tour/{tour}/scenes/{scene}', [VirtualTourSceneController::class, 'destroy'])->name('properties.tour.scenes.destroy');
 
         Route::post('properties/{property}/tour/{tour}/scenes/{scene}/hotspots', [SceneHotspotController::class, 'store'])->name('properties.tour.hotspots.store');
+        Route::patch('properties/{property}/tour/{tour}/scenes/{scene}/hotspots/{hotspot}', [SceneHotspotController::class, 'update'])->name('properties.tour.hotspots.update');
         Route::delete('properties/{property}/tour/{tour}/scenes/{scene}/hotspots/{hotspot}', [SceneHotspotController::class, 'destroy'])->name('properties.tour.hotspots.destroy');
 
         // Applications & viewing requests for properties this user owns/manages
@@ -145,6 +153,7 @@ Route::middleware('auth')->group(function () {
         Route::get('contracts', [TenantRentalContractController::class, 'index'])->name('contracts.index');
         Route::get('contracts/{contract}', [TenantRentalContractController::class, 'show'])->name('contracts.show');
         Route::get('contracts/{contract}/pdf', [TenantRentalContractController::class, 'downloadPdf'])->name('contracts.pdf');
+        Route::post('contracts/{contract}/rent/{month}/start', [\App\Http\Controllers\Tenant\RentInstallmentController::class, 'start'])->name('contracts.rent.start');
         Route::get('contracts/{contract}/review', [TenantReviewController::class, 'create'])->name('contracts.review.create');
         Route::post('contracts/{contract}/review', [TenantReviewController::class, 'store'])->name('contracts.review.store');
 
@@ -176,7 +185,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('payments/{payment}/proof', [PaymentDocumentController::class, 'download'])->name('payments.proof.download');
     Route::get('documents/{document}/download', [ApplicationDocumentController::class, 'download'])->name('documents.download');
+    Route::get('documents/{document}/view', [ApplicationDocumentController::class, 'show'])->name('documents.view');
     Route::get('documents/verification/{document}/download', [VerificationDocumentController::class, 'download'])->name('verification-documents.download');
+    Route::get('documents/verification/{document}/view', [VerificationDocumentController::class, 'show'])->name('verification-documents.view');
 
     // Owner verification — deliberately OUTSIDE the 'owner.verified' gate above,
     // since an unverified owner must still be able to reach this page.
@@ -198,6 +209,9 @@ Route::middleware('auth')->group(function () {
         Route::patch('owner-verifications/{ownerVerification}/approve', [AdminOwnerVerificationController::class, 'approve'])->name('owner-verifications.approve');
         Route::patch('owner-verifications/{ownerVerification}/reject', [AdminOwnerVerificationController::class, 'reject'])->name('owner-verifications.reject');
         Route::patch('owner-verifications/{ownerVerification}/request-more', [AdminOwnerVerificationController::class, 'requestMoreDocuments'])->name('owner-verifications.request-more');
+        Route::patch('owner-verifications/{ownerVerification}/archive', [AdminOwnerVerificationController::class, 'archive'])->name('owner-verifications.archive');
+        Route::patch('owner-verifications/{ownerVerification}/unarchive', [AdminOwnerVerificationController::class, 'unarchive'])->name('owner-verifications.unarchive');
+        Route::delete('owner-verifications/{ownerVerification}/files', [AdminOwnerVerificationController::class, 'purgeFiles'])->name('owner-verifications.purge-files');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/{type}', [ReportController::class, 'show'])->name('reports.show');
@@ -207,6 +221,9 @@ Route::middleware('auth')->group(function () {
         Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
         Route::get('users/{user}/password/edit', [AdminUserController::class, 'editPassword'])->name('users.password.edit');
         Route::patch('users/{user}/password', [AdminUserController::class, 'updatePassword'])->name('users.password.update');
+        Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+        Route::get('users-deleted', [AdminUserController::class, 'deleted'])->name('users.deleted');
+        Route::patch('users/{user}/restore', [AdminUserController::class, 'restore'])->withTrashed()->name('users.restore');
     });
 });
 

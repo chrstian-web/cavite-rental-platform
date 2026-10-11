@@ -79,7 +79,7 @@
             <p class="text-xs text-slate-400 mt-2 mb-2">
                 If you know the coordinates of your workplace/school, we can score properties by proximity to it.
             </p>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input type="number" step="0.0000001" name="reference_latitude" placeholder="Latitude" class="rounded-lg border-slate-300 text-sm">
                 <input type="number" step="0.0000001" name="reference_longitude" placeholder="Longitude" class="rounded-lg border-slate-300 text-sm">
                 <input type="number" step="0.1" name="max_distance_km" placeholder="Max distance (km)" class="rounded-lg border-slate-300 text-sm">

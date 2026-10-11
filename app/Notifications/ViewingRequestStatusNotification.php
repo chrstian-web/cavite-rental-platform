@@ -25,7 +25,8 @@ class ViewingRequestStatusNotification extends Notification
         $status = $this->viewing->status;
         $line = match ($status) {
             'confirmed' => 'Your viewing request has been confirmed for '.$this->viewing->preferred_date->format('M j, Y').' at '.$this->viewing->preferred_time.'.',
-            'rescheduled' => 'Your viewing has been rescheduled to '.$this->viewing->preferred_date->format('M j, Y').' at '.$this->viewing->preferred_time.'.',
+            'rescheduled' => 'Your viewing has been rescheduled to '.$this->viewing->preferred_date->format('M j, Y').' at '.$this->viewing->preferred_time.'.'
+                .($this->viewing->reschedule_reason ? ' Reason: '.$this->viewing->reschedule_reason : ''),
             'cancelled' => 'Your viewing request was cancelled.',
             'completed' => 'Your viewing has been marked as completed. Thanks for visiting!',
             default => 'Your viewing request status has been updated.',
@@ -43,6 +44,9 @@ class ViewingRequestStatusNotification extends Notification
             'viewing_id' => $this->viewing->id,
             'property_name' => $this->viewing->property->name,
             'status' => $this->viewing->status,
+            'preferred_date' => $this->viewing->preferred_date->format('M j, Y'),
+            'preferred_time' => substr((string) $this->viewing->preferred_time, 0, 5),
+            'reason' => $this->viewing->status === 'rescheduled' ? $this->viewing->reschedule_reason : null,
         ];
     }
 }

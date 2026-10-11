@@ -107,7 +107,7 @@
     <p class="text-xs text-slate-400 mt-1">Up to 10 images, 5MB each. First upload becomes the cover photo automatically.</p>
 
     @if (isset($property) && $property->images->isNotEmpty())
-        <div class="grid grid-cols-4 gap-2 mt-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
             @foreach ($property->images as $image)
                 <div class="relative group">
                     <img src="{{ asset('storage/'.$image->path) }}" class="w-full h-20 object-cover rounded-lg

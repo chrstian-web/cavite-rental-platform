@@ -5,6 +5,18 @@
 @push('head')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+    <style>
+        /* Draggable placement arrow (owner editor only). Do not set `transform` here:
+           Pannellum positions hotspots with it. */
+        .tour-placement-marker {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            outline: 3px solid #2563eb;
+            outline-offset: 3px;
+        }
+        .tour-placement-marker.is-dragging { cursor: grabbing; outline-color: #f59e0b; }
+    </style>
 @endpush
 
 @section('content')
@@ -132,6 +144,20 @@
                                             class="rounded-lg border-slate-300 text-xs">
                                         <input id="hotspot-pitch-{{ $scene->id }}" type="number" step="0.01" name="position_y" placeholder="Pitch, e.g. -50 for floor" required
                                             class="rounded-lg border-slate-300 text-xs">
+                                        <div class="col-span-2">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label for="hotspot-size-{{ $scene->id }}" class="text-xs font-medium text-slate-700">Arrow size</label>
+                                                <output id="hotspot-size-out-{{ $scene->id }}" class="text-xs text-slate-500">56 px</output>
+                                            </div>
+                                            <input id="hotspot-size-{{ $scene->id }}" type="range" name="size" min="24" max="140" step="2" value="56"
+                                                data-size-slider="{{ $scene->id }}" class="w-full">
+                                            <div class="flex gap-2 mt-1">
+                                                @foreach ([['Small', 36], ['Medium', 56], ['Large', 90]] as [$sizeLabel, $sizePx])
+                                                    <button type="button" data-size-preset="{{ $scene->id }}" data-size="{{ $sizePx }}"
+                                                        class="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs rounded-lg py-1">{{ $sizeLabel }}</button>
+                                                @endforeach
+                                            </div>
+                                        </div>
                                         <button type="button" data-place-hotspot="{{ $scene->id }}"
                                             class="col-span-2 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs rounded-lg py-1.5">
                                             Place arrow on preview
@@ -143,14 +169,27 @@
                                 </details>
 
                                 @if ($scene->hotspots->isNotEmpty())
-                                    <ul class="mt-2 text-xs text-slate-500 space-y-1">
+                                    <ul class="mt-2 text-xs text-slate-500 space-y-2">
                                         @foreach ($scene->hotspots as $hotspot)
-                                            <li class="flex items-center justify-between">
-                                                <span>{{ $hotspot->label ?? 'Hotspot' }} (yaw {{ $hotspot->position_x }}, pitch {{ $hotspot->position_y }})</span>
-                                                <form action="{{ route('owner.properties.tour.hotspots.destroy', [$property, $tour, $scene, $hotspot]) }}" method="POST">
-                                                    @csrf @method('DELETE')
-                                                    <button class="text-red-500 hover:underline">remove</button>
-                                                </form>
+                                            <li>
+                                                <div class="flex items-center justify-between">
+                                                    <span>{{ $hotspot->label ?? 'Hotspot' }} (yaw {{ $hotspot->position_x }}, pitch {{ $hotspot->position_y }})</span>
+                                                    <form action="{{ route('owner.properties.tour.hotspots.destroy', [$property, $tour, $scene, $hotspot]) }}" method="POST">
+                                                        @csrf @method('DELETE')
+                                                        <button class="text-red-500 hover:underline">remove</button>
+                                                    </form>
+                                                </div>
+                                                @if ($hotspot->target_scene_id)
+                                                    <form action="{{ route('owner.properties.tour.hotspots.update', [$property, $tour, $scene, $hotspot]) }}" method="POST"
+                                                          class="flex items-center gap-2 mt-1">
+                                                        @csrf @method('PATCH')
+                                                        <span class="text-slate-400">Size</span>
+                                                        <input type="range" name="size" min="24" max="140" step="2" value="{{ $hotspot->size ?? 56 }}"
+                                                            data-saved-size="{{ $hotspot->id }}" data-saved-scene="{{ $scene->id }}" class="flex-1">
+                                                        <output class="w-10 text-right">{{ $hotspot->size ?? 56 }}px</output>
+                                                        <button class="text-blue-600 hover:underline">save</button>
+                                                    </form>
+                                                @endif
                                             </li>
                                         @endforeach
                                     </ul>
@@ -169,50 +208,288 @@
         <script>
         document.addEventListener('DOMContentLoaded', function () {
             const viewer = window['ownerTour_getInlineViewer'] && window['ownerTour_getInlineViewer']();
-            if (!viewer) return;
-
-            let placementSceneId = null;
-            let placementHotspotId = null;
             const preview = document.getElementById('ownerTour-inline');
-            const buttons = document.querySelectorAll('[data-place-hotspot]');
-
-            function setPlacementMode(sceneId, button) {
-                placementSceneId = String(sceneId);
-                if (typeof viewer.loadScene === 'function') viewer.loadScene('scene-' + placementSceneId);
-                buttons.forEach(item => item.classList.remove('ring-2', 'ring-blue-500'));
-                button.classList.add('ring-2', 'ring-blue-500');
-                preview.classList.add('ring-4', 'ring-blue-200');
-                button.textContent = 'Now click the panorama to place the arrow';
+            if (!viewer || !preview) {
+                // Don't fail silently: tell the owner and log the reason.
+                console.error('[tour editor] 360 viewer not ready.',
+                    { pannellumLoaded: typeof window.pannellum !== 'undefined',
+                      getInlineViewer: typeof window['ownerTour_getInlineViewer'],
+                      previewElement: !!preview });
+                document.querySelectorAll('[data-place-hotspot]').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        b.textContent = 'Preview not loaded — press Ctrl+F5 (see console F12)';
+                    });
+                });
+                return;
             }
 
-            function placeMarker(pitch, yaw) {
-                if (placementHotspotId) viewer.removeHotSpot(placementHotspotId);
-                placementHotspotId = 'owner-placement-marker';
-                viewer.addHotSpot({
-                    id: placementHotspotId,
+            const MARKER_ID = 'owner-placement-marker';
+            const buttons = document.querySelectorAll('[data-place-hotspot]');
+            const originalLabels = new Map();
+            buttons.forEach(function (b) { originalLabels.set(b, b.textContent.trim()); });
+
+            let activeSceneId = null;   // numeric scene id (string) we are placing an arrow in
+            let activeButton = null;
+            let markerHs = null;        // the Pannellum hotspot config object (mutated while dragging)
+            let markerSceneKey = null;  // e.g. "scene-3"
+            let markerDiv = null;       // DOM element of the marker (for live resizing)
+            let dragging = false;
+            let nudge = 0.0005;
+            let downPos = null;
+
+            // ---- helpers -------------------------------------------------------------
+            function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+
+            function normalizeYaw(yaw) {
+                while (yaw > 180) yaw -= 360;
+                while (yaw < -180) yaw += 360;
+                return yaw;
+            }
+
+            // Pannellum's real API is mouseEventToCoords(event) -> [pitch, yaw].
+            function coordsFromEvent(event) {
+                if (typeof viewer.mouseEventToCoords !== 'function') return null;
+                const c = viewer.mouseEventToCoords(event);
+                if (!c) return null;
+                const pitch = Array.isArray(c) ? c[0] : c.pitch;
+                const yaw = Array.isArray(c) ? c[1] : c.yaw;
+                if (!isFinite(pitch) || !isFinite(yaw)) return null;
+                return { pitch: pitch, yaw: yaw };
+            }
+
+            function fillInputs(pitch, yaw) {
+                const yawInput = document.getElementById('hotspot-yaw-' + activeSceneId);
+                const pitchInput = document.getElementById('hotspot-pitch-' + activeSceneId);
+                if (yawInput) yawInput.value = yaw.toFixed(2);
+                if (pitchInput) pitchInput.value = pitch.toFixed(2);
+            }
+
+            // Pannellum only re-draws hotspots when the view changes, so nudge it by a
+            // tiny (invisible) amount after we move the marker's coordinates.
+            function redraw() {
+                nudge = -nudge;
+                viewer.setYaw(viewer.getYaw() + nudge, false);
+            }
+
+            function setMarkerPosition(pitch, yaw) {
+                if (!markerHs) return;
+                pitch = clamp(pitch, -90, 90);
+                yaw = normalizeYaw(yaw);
+                markerHs.pitch = pitch;
+                markerHs.yaw = yaw;
+                fillInputs(pitch, yaw);
+                redraw();
+            }
+
+            function setButtonLabel(text) {
+                if (activeButton) activeButton.textContent = text;
+            }
+
+            function resetButtons() {
+                buttons.forEach(function (b) {
+                    b.classList.remove('ring-2', 'ring-blue-500');
+                    b.textContent = originalLabels.get(b);
+                });
+                preview.classList.remove('ring-4', 'ring-blue-200');
+            }
+
+            function removeMarker() {
+                if (markerHs && markerSceneKey) {
+                    try { viewer.removeHotSpot(MARKER_ID, markerSceneKey); } catch (e) { /* already gone */ }
+                }
+                markerHs = null;
+                markerSceneKey = null;
+                markerDiv = null;
+            }
+
+            // ---- dragging the marker ---------------------------------------------------
+            function currentSize() {
+                const slider = document.getElementById('hotspot-size-' + activeSceneId);
+                return slider ? Number(slider.value) : 56;
+            }
+
+            function bindMarkerDrag(div) {
+                markerDiv = div;
+                div.style.setProperty('--arrow-size', currentSize() + 'px');
+                div.title = 'Drag to move the arrow';
+                div.style.touchAction = 'none';
+
+                // Keep Pannellum from treating a marker drag as a panorama pan.
+                ['mousedown', 'touchstart', 'click', 'dblclick'].forEach(function (type) {
+                    div.addEventListener(type, function (e) { e.stopPropagation(); });
+                });
+
+                div.addEventListener('pointerdown', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragging = true;
+                    div.classList.add('is-dragging');
+                    try { div.setPointerCapture(e.pointerId); } catch (err) { /* not critical */ }
+                });
+
+                div.addEventListener('pointermove', function (e) {
+                    if (!dragging) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const c = coordsFromEvent(e);
+                    if (c) setMarkerPosition(c.pitch, c.yaw);
+                });
+
+                function endDrag(e) {
+                    if (!dragging) return;
+                    dragging = false;
+                    div.classList.remove('is-dragging');
+                    try { div.releasePointerCapture(e.pointerId); } catch (err) { /* not critical */ }
+                    setButtonLabel('Arrow placed — drag it, or click the panorama to move it');
+                }
+                div.addEventListener('pointerup', endDrag);
+                div.addEventListener('pointercancel', endDrag);
+            }
+
+            // ---- placement flow -------------------------------------------------------
+            function addMarkerAtViewCenter() {
+                const pitch = clamp(viewer.getPitch(), -90, 90);
+                const yaw = normalizeYaw(viewer.getYaw());
+
+                markerHs = {
+                    id: MARKER_ID,
                     pitch: pitch,
                     yaw: yaw,
                     type: 'custom',
                     cssClass: 'tour-placement-marker',
-                    text: 'Selected hotspot position'
-                });
+                    createTooltipFunc: bindMarkerDrag
+                };
+                markerSceneKey = 'scene-' + activeSceneId;
+                viewer.addHotSpot(markerHs, markerSceneKey);
+
+                // Pannellum creates new hotspots hidden and only reveals them on the next
+                // render, so force one — otherwise the arrow stays invisible until you pan.
+                redraw();
+
+                fillInputs(pitch, yaw);
+                if (markerHs.div) {
+                    setButtonLabel('Arrow placed — drag it, or click the panorama to move it');
+                } else {
+                    console.error('[tour editor] arrow element was not created; is the panorama loaded?');
+                    setButtonLabel('Could not draw the arrow — the panorama is not loaded (see console F12)');
+                }
             }
 
-            buttons.forEach(button => button.addEventListener('click', function () {
-                setPlacementMode(this.dataset.placeHotspot, this);
-            }));
+            function startPlacement(sceneId, button) {
+                removeMarker();
+                resetButtons();
 
+                activeSceneId = String(sceneId);
+                activeButton = button;
+                button.classList.add('ring-2', 'ring-blue-500');
+                preview.classList.add('ring-4', 'ring-blue-200');
+                button.textContent = 'Loading scene…';
+
+                // The preview sits above the forms — bring it into view.
+                preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                const key = 'scene-' + activeSceneId;
+                if (viewer.getScene() === key) {
+                    addMarkerAtViewCenter();
+                    return;
+                }
+
+                const onLoad = function () {
+                    viewer.off('load', onLoad);
+                    if (activeSceneId !== null && 'scene-' + activeSceneId === key) addMarkerAtViewCenter();
+                };
+                viewer.on('load', onLoad);
+                viewer.loadScene(key);
+
+                window.setTimeout(function () {
+                    if (activeButton === button && button.textContent === 'Loading scene…') {
+                        viewer.off('load', onLoad);
+                        button.textContent = 'Scene did not load — open the panorama image URL to check it exists';
+                    }
+                }, 10000);
+            }
+
+            buttons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    try {
+                        startPlacement(this.dataset.placeHotspot, this);
+                    } catch (err) {
+                        console.error('[tour editor] could not place arrow:', err);
+                        this.textContent = 'Error: ' + (err && err.message ? err.message : err) + ' (see console F12)';
+                    }
+                });
+            });
+
+            // ---- arrow size (new arrow) ---------------------------------------------------
+            document.querySelectorAll('[data-size-slider]').forEach(function (slider) {
+                slider.addEventListener('input', function () {
+                    const out = document.getElementById('hotspot-size-out-' + slider.dataset.sizeSlider);
+                    if (out) out.textContent = slider.value + ' px';
+                    if (activeSceneId === slider.dataset.sizeSlider && markerDiv) {
+                        markerDiv.style.setProperty('--arrow-size', slider.value + 'px');
+                        redraw(); // Pannellum re-centres the hotspot using its new width
+                    }
+                });
+            });
+            document.querySelectorAll('[data-size-preset]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const slider = document.getElementById('hotspot-size-' + btn.dataset.sizePreset);
+                    if (!slider) return;
+                    slider.value = btn.dataset.size;
+                    slider.dispatchEvent(new Event('input'));
+                });
+            });
+
+            // ---- arrow size (already-saved arrows): live preview, saved with the "save" button ----
+            function applySavedSize(hotspotId, sceneKey, size) {
+                const apply = function () {
+                    const cfg = typeof viewer.getConfig === 'function' ? viewer.getConfig() : null;
+                    const hs = cfg && (cfg.hotSpots || []).find(function (h) { return h.id === 'hotspot-' + hotspotId; });
+                    if (hs && hs.div) {
+                        hs.div.style.setProperty('--arrow-size', size + 'px');
+                        redraw();
+                    }
+                };
+                if (viewer.getScene() === sceneKey) { apply(); return; }
+                const onLoad = function () { viewer.off('load', onLoad); apply(); };
+                viewer.on('load', onLoad);
+                viewer.loadScene(sceneKey);
+            }
+            document.querySelectorAll('[data-saved-size]').forEach(function (slider) {
+                slider.addEventListener('input', function () {
+                    const out = slider.parentElement.querySelector('output');
+                    if (out) out.textContent = slider.value + 'px';
+                    applySavedSize(slider.dataset.savedSize, 'scene-' + slider.dataset.savedScene, slider.value);
+                });
+            });
+
+            viewer.on('error', function (message) {
+                console.error('[tour editor] Pannellum error:', message);
+                if (activeButton) activeButton.textContent = 'Viewer error: ' + message;
+            });
+
+            // If the owner switches to another scene, drop the pending marker.
+            viewer.on('scenechange', function (sceneId) {
+                if (activeSceneId !== null && sceneId !== 'scene-' + activeSceneId) {
+                    removeMarker();
+                    resetButtons();
+                    activeSceneId = null;
+                    activeButton = null;
+                }
+            });
+
+            // Click (not drag-pan) on the panorama moves the marker there.
+            preview.addEventListener('pointerdown', function (e) {
+                downPos = { x: e.clientX, y: e.clientY };
+            });
             preview.addEventListener('click', function (event) {
-                if (!placementSceneId || !viewer || typeof viewer.mouse2coord !== 'function') return;
-                const coords = viewer.mouse2coord(event);
-                if (!coords) return;
-                const yaw = Math.max(-180, Math.min(180, Number(coords[1] ?? coords.yaw ?? 0)));
-                const pitch = Math.max(-90, Math.min(90, Number(coords[0] ?? coords.pitch ?? 0)));
-                document.getElementById('hotspot-yaw-' + placementSceneId).value = yaw.toFixed(2);
-                document.getElementById('hotspot-pitch-' + placementSceneId).value = pitch.toFixed(2);
-                placeMarker(pitch, yaw);
-                const activeButton = document.querySelector('[data-place-hotspot="' + placementSceneId + '"]');
-                if (activeButton) activeButton.textContent = 'Arrow placed — click again to reposition';
+                if (activeSceneId === null || !markerHs || dragging) return;
+                if (event.target.closest('.pnlm-hotspot-base, .pnlm-controls-container')) return;
+                if (downPos && Math.hypot(event.clientX - downPos.x, event.clientY - downPos.y) > 5) return; // it was a pan
+                const c = coordsFromEvent(event);
+                if (!c) return;
+                setMarkerPosition(c.pitch, c.yaw);
+                setButtonLabel('Arrow placed — drag it, or click the panorama to move it');
             });
         });
         </script>

@@ -38,16 +38,26 @@
                             </td>
                             <td class="px-4 py-3 text-right">
                                 @if (! in_array($viewing->status, ['completed', 'cancelled']))
-                                    <form method="POST" action="{{ route('owner.viewings.update', $viewing) }}" class="inline-flex flex-wrap items-center gap-2 justify-end">
+                                    <form method="POST" action="{{ route('owner.viewings.update', $viewing) }}" x-data="{ status: 'confirmed' }"
+                                          class="inline-flex flex-wrap items-center gap-2 justify-end">
                                         @csrf @method('PATCH')
-                                        <select name="status" class="rounded-lg border-slate-300 text-xs">
+                                        <select name="status" x-model="status" class="rounded-lg border-slate-300 text-xs">
                                             <option value="confirmed">Confirm</option>
-                                            <option value="rescheduled">Reschedule (fill date/time)</option>
+                                            <option value="rescheduled">Reschedule</option>
                                             <option value="completed">Mark Completed</option>
-                                            <option value="cancelled">Cancel</option>
                                         </select>
-                                        <input type="date" name="preferred_date" class="rounded-lg border-slate-300 text-xs w-32">
-                                        <input type="time" name="preferred_time" class="rounded-lg border-slate-300 text-xs w-24">
+                                        {{-- The renter already chose the date and time; they are only asked for when rescheduling. --}}
+                                        <template x-if="status === 'rescheduled'">
+                                            <span class="inline-flex flex-wrap items-center gap-2">
+                                                <input type="date" name="preferred_date" required min="{{ now()->toDateString() }}"
+                                                       value="{{ $viewing->preferred_date->format('Y-m-d') }}" class="rounded-lg border-slate-300 text-xs w-32">
+                                                <input type="time" name="preferred_time" required
+                                                       value="{{ substr((string) $viewing->preferred_time, 0, 5) }}" class="rounded-lg border-slate-300 text-xs w-24">
+                                                <textarea name="reschedule_reason" required minlength="5" maxlength="500" rows="2"
+                                                          placeholder="Why are you rescheduling? The renter will see this."
+                                                          class="rounded-lg border-slate-300 text-xs w-full sm:w-72"></textarea>
+                                            </span>
+                                        </template>
                                         <button class="text-blue-600 text-xs hover:underline">Update</button>
                                     </form>
                                 @endif

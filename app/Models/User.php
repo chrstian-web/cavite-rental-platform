@@ -27,6 +27,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'onboarding_welcomed_at' => 'datetime',
+            'onboarding_tour_completed_at' => 'datetime',
+            'onboarding_checklist_dismissed_at' => 'datetime',
+            'onboarding_steps_seen' => 'array',
         ];
     }
 

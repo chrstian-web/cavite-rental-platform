@@ -35,6 +35,9 @@ class NewViewingRequestNotification extends Notification
             'type' => 'new_viewing_request',
             'viewing_id' => $this->viewing->id,
             'property_name' => $this->viewing->property->name,
+            'requester_name' => trim($this->viewing->user->first_name.' '.$this->viewing->user->last_name),
+            'preferred_date' => $this->viewing->preferred_date->format('M j, Y'),
+            'preferred_time' => (string) $this->viewing->preferred_time,
         ];
     }
 }

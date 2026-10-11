@@ -28,8 +28,12 @@ class RentalApplicationController extends Controller
         return view('tenant.applications.index', compact('applications'));
     }
 
-    public function create(RentalSpace $space): View
+    public function create(RentalSpace $space): View|RedirectResponse
     {
+        if (! $space->acceptsApplications()) {
+            return $this->closedResponse($space);
+        }
+
         $space->load(['property', 'images']);
 
         return view('tenant.applications.create', ['space' => $space, 'property' => $space->property]);
@@ -37,6 +41,10 @@ class RentalApplicationController extends Controller
 
     public function store(StoreRentalApplicationRequest $request, RentalSpace $space): RedirectResponse
     {
+        if (! $space->acceptsApplications()) {
+            return $this->closedResponse($space);
+        }
+
         $data = $request->safe()->except('documents');
 
         $this->applications->submit(
@@ -58,5 +66,13 @@ class RentalApplicationController extends Controller
         $application->load(['property', 'rentalSpace', 'documents']);
 
         return view('tenant.applications.show', compact('application'));
+    }
+
+    /** A full or unavailable space cannot be applied to, even through a direct link. */
+    protected function closedResponse(RentalSpace $space): RedirectResponse
+    {
+        return redirect()
+            ->route('properties.show', $space->property->slug)
+            ->withErrors(['space' => "{$space->space_number} is no longer open for applications."]);
     }
 }

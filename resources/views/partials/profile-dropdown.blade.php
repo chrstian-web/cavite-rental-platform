@@ -1,4 +1,4 @@
-<div x-data="{ open: false }" class="relative">
+<div x-data="{ open: false }" class="relative" data-tour="profile">
     <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-1.5">
         <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
             {{ strtoupper(substr(auth()->user()->first_name, 0, 1).substr(auth()->user()->last_name, 0, 1)) }}
@@ -61,6 +61,18 @@
                 <span class="text-xs bg-red-100 text-red-600 rounded-full px-1.5 py-0.5">{{ auth()->user()->unreadNotifications()->count() }}</span>
             @endif
         </a>
+
+        @unless (auth()->user()->isSuperAdmin())
+            <form method="POST" action="{{ route('onboarding.restart') }}">
+                @csrf
+                <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-left">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.2 9a3.8 3.8 0 117.2 1.6c-.8 1.2-2.2 1.6-2.9 2.6-.3.4-.5.9-.5 1.5M12 18h.01" />
+                    </svg>
+                    Take the tour
+                </button>
+            </form>
+        @endunless
 
         <div class="border-t border-slate-100">
             <form method="POST" action="{{ route('logout') }}">

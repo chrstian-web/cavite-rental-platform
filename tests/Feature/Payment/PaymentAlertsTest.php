@@ -54,7 +54,7 @@ class PaymentAlertsTest extends TestCase
     {
         [$owner, , $payment] = $this->scenario();
 
-        $this->actingAs($owner)->getJson(route('payment-alerts.index'))
+        $this->actingAs($owner)->getJson(route('alerts.index'))
             ->assertOk()
             ->assertJsonPath('alerts.0.tenant_name', 'Juan Dela Cruz')
             ->assertJsonPath('alerts.0.amount', '₱8,000.00')
@@ -68,17 +68,17 @@ class PaymentAlertsTest extends TestCase
     {
         [$owner, , , $notification] = $this->scenario();
 
-        $this->actingAs($owner)->postJson(route('payment-alerts.dismiss', $notification->id))->assertOk();
+        $this->actingAs($owner)->postJson(route('alerts.dismiss', $notification->id))->assertOk();
 
         $this->assertNotNull($notification->fresh()->read_at);
-        $this->actingAs($owner)->getJson(route('payment-alerts.index'))->assertJsonPath('alerts', []);
+        $this->actingAs($owner)->getJson(route('alerts.index'))->assertJsonPath('alerts', []);
     }
 
     public function test_dismiss_all_clears_every_payment_alert(): void
     {
         [$owner, , , $notification] = $this->scenario();
 
-        $this->actingAs($owner)->postJson(route('payment-alerts.dismiss-all'))->assertOk();
+        $this->actingAs($owner)->postJson(route('alerts.dismiss-all'))->assertOk();
 
         $this->assertNotNull($notification->fresh()->read_at);
     }
@@ -88,16 +88,37 @@ class PaymentAlertsTest extends TestCase
         [, , , $notification] = $this->scenario();
         $stranger = User::factory()->owner()->create();
 
-        $this->actingAs($stranger)->postJson(route('payment-alerts.dismiss', $notification->id))->assertOk();
+        $this->actingAs($stranger)->postJson(route('alerts.dismiss', $notification->id))->assertOk();
 
         $this->assertNull($notification->fresh()->read_at);
     }
 
-    public function test_tenants_do_not_get_the_feed(): void
+    public function test_tenants_get_their_own_feed_and_never_the_owners(): void
     {
         [, $tenant] = $this->scenario();
 
-        $this->actingAs($tenant)->getJson(route('payment-alerts.index'))->assertForbidden();
+        $this->actingAs($tenant)->getJson(route('alerts.index'))
+            ->assertOk()
+            ->assertJsonPath('alerts', []);
+    }
+
+    public function test_a_tenant_sees_a_floating_card_when_the_owner_accepts_their_viewing(): void
+    {
+        [$owner, $tenant] = $this->scenario();
+        $property = Property::factory()->create(['owner_id' => $owner->id, 'name' => 'Sunrise Apartments']);
+
+        DatabaseNotification::create([
+            'id' => (string) Str::uuid(),
+            'type' => 'viewing',
+            'notifiable_type' => User::class,
+            'notifiable_id' => $tenant->id,
+            'data' => ['type' => 'viewing_request_status', 'viewing_id' => 1, 'property_name' => $property->name, 'status' => 'confirmed'],
+        ]);
+
+        $this->actingAs($tenant)->getJson(route('alerts.index'))
+            ->assertOk()
+            ->assertJsonPath('alerts.0.headline', 'Your viewing request was accepted')
+            ->assertJsonPath('alerts.0.sub', 'Sunrise Apartments');
     }
 
     public function test_owner_is_notified_when_a_tenant_adds_payment_details(): void
@@ -120,7 +141,8 @@ class PaymentAlertsTest extends TestCase
 
         $this->actingAs($owner)->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('paymentAlerts(', false)
+            ->assertSee('notificationAlerts(', false)
+            ->assertSee('pa-backdrop', false)
             ->assertSee('Juan Dela Cruz');
     }
 }

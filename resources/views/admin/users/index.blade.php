@@ -6,8 +6,9 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
             <h1 class="text-xl font-semibold text-slate-900">Manage users</h1>
-            <p class="text-sm text-slate-500 mt-1">Reset a user’s password without viewing or storing it in plain text.</p>
+            <p class="text-sm text-slate-500 mt-1">Reset a user’s password or remove accounts that are no longer members.</p>
         </div>
+        <a href="{{ route('admin.users.deleted') }}" class="text-sm text-slate-600 hover:underline">Deleted users &rarr;</a>
     </div>
 
     <form method="GET" class="mb-4 flex gap-2">
@@ -41,10 +42,18 @@
                                     {{ str($user->status)->title() }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <a href="{{ route('admin.users.password.edit', $user) }}" class="text-blue-600 hover:underline">
                                     Reset password
                                 </a>
+                                @if (! $user->isSuperAdmin() && ! $user->is(auth()->user()))
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline ml-4"
+                                          onsubmit="return confirm('Delete {{ addslashes($user->first_name.' '.$user->last_name) }}? They will no longer be able to log in. Their contracts and payment history are kept.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-red-600 hover:underline">Delete</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty

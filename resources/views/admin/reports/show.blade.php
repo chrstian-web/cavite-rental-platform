@@ -58,7 +58,7 @@
     @endisset
 
     <div class="bg-white border border-slate-200 rounded-xl overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm" data-no-stack>
             <thead class="bg-slate-50 text-slate-500 text-left">
                 <tr>
                     @foreach ($report['headers'] as $header)

@@ -95,19 +95,25 @@
                                 </div>
                                 <div class="text-right">
                                     <p class="font-medium text-slate-900">₱{{ number_format($space->monthly_rent) }}/mo</p>
-                                    @php $rented = $space->isRented(); @endphp
-                                    @if ($rented)
-                                        <span class="text-xs font-semibold text-red-500">Occupied</span>
-                                        @if ($space->total_capacity > 1)
-                                            <span class="block text-[11px] text-slate-400">{{ min($space->active_contracts_count ?? 0, $space->total_capacity) }}/{{ $space->total_capacity }} taken</span>
-                                        @endif
+                                    @php
+                                        $taken = max($space->activeContractsCount(), (int) $space->occupied_capacity);
+                                        $full = $space->isFull();
+                                        $left = $space->spotsLeft();
+                                    @endphp
+                                    @if ($full)
+                                        <span class="text-xs font-semibold text-red-500">{{ $space->total_capacity > 1 ? 'Full' : 'Occupied' }}</span>
                                     @else
                                         <span class="text-xs {{ $space->status === 'available' ? 'text-green-600' : 'text-slate-400' }}">
                                             {{ str($space->status)->title() }}
                                         </span>
                                     @endif
+                                    @if ($space->total_capacity > 1)
+                                        <span class="block text-[11px] text-slate-400">
+                                            {{ min($taken, $space->total_capacity) }}/{{ $space->total_capacity }} taken{!! (! $full && $left > 0) ? ' &middot; '.$left.' left' : '' !!}
+                                        </span>
+                                    @endif
                                     @auth
-                                        @if (auth()->user()->isTenant() && $space->status === 'available' && ! $rented)
+                                        @if (auth()->user()->isTenant() && $space->acceptsApplications())
                                             <a href="{{ route('tenant.applications.create', $space) }}" class="block text-xs text-blue-600 hover:underline mt-1">Apply</a>
                                         @endif
                                     @endauth

@@ -9,7 +9,7 @@ class ViewingRequest extends Model
 {
     protected $fillable = [
         'user_id', 'property_id', 'rental_space_id', 'preferred_date',
-        'preferred_time', 'message', 'status',
+        'preferred_time', 'message', 'reschedule_reason', 'status',
     ];
 
     protected function casts(): array

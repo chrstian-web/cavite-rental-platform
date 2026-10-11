@@ -17,93 +17,120 @@
                     ? $tour->scenes->firstWhere('id', $hotspot->target_scene_id)
                     : null;
 
+                $size = max(24, min(140, (int) ($hotspot->size ?: 56)));
+
                 return [
+                'id' => 'hotspot-'.$hotspot->id,
                 'pitch' => (float) $hotspot->position_y,
                 'yaw' => (float) $hotspot->position_x,
                 'type' => $hotspot->target_scene_id ? 'scene' : 'info',
                 'text' => $hotspot->label ?: ($target ? 'Go to '.$target->title : 'Information'),
                 'sceneId' => $hotspot->target_scene_id ? 'scene-'.$hotspot->target_scene_id : null,
-                'cssClass' => $hotspot->target_scene_id ? 'tour-hotspot-arrow' : 'tour-hotspot-info',
+                'cssClass' => $hotspot->target_scene_id ? 'tour-hotspot-arrow tour-size-'.$size : 'tour-hotspot-info',
                 ];
             })->values()->toArray(),
         ],
     ])->toJson(JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
     $firstSceneId = 'scene-'.$tour->scenes->first()->id;
+    $arrowSizes = $tour->scenes->flatMap(fn ($scene) => $scene->hotspots)
+        ->map(fn ($hotspot) => max(24, min(140, (int) ($hotspot->size ?: 56))))
+        ->push(56)->unique()->values();
 @endphp
 
 <style>
+    /* Per-arrow sizes chosen by the owner (one tiny rule per distinct size). */
+@foreach ($arrowSizes as $px)
+    .tour-size-{{ $px }} { --arrow-size: {{ $px }}px; }
+@endforeach
+
+    /*
+     * Navigation arrow (renters + owner placement marker).
+     * NOTE: never set `transform` on the hotspot element itself — Pannellum uses it
+     * for positioning. All animation/scaling happens on the pseudo-elements.
+     */
     .tour-hotspot-arrow,
-    .tour-hotspot-info,
     .tour-placement-marker {
-        /* Pannellum positions this element with top/left/transform. */
         position: absolute !important;
-        border: 2px solid white;
-        border-radius: 9999px;
+        display: block !important;
+        width: var(--arrow-size, 56px) !important;
+        height: var(--arrow-size, 56px) !important;
+        box-sizing: border-box !important;
+        border-radius: 9999px !important;
+        border: 2px solid rgba(255, 255, 255, .95) !important;
+        background:
+            radial-gradient(circle at 32% 22%, #ffffff 0%, #eef2f7 45%, #cbd5e1 100%) !important;
+        box-shadow:
+            0 8px 20px rgba(2, 6, 23, .5),
+            inset 0 -4px 8px rgba(15, 23, 42, .16),
+            inset 0 2px 3px rgba(255, 255, 255, .9);
         cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
-        transition: box-shadow .15s ease;
+        transition: box-shadow .18s ease, filter .18s ease;
     }
 
-    .tour-hotspot-arrow {
-    display: block !important;
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
-    min-height: 52px !important;
-    max-width: 52px !important;
-    max-height: 52px !important;
-    background: rgba(255, 255, 255, .88) !important;
-    border: 2px solid rgba(15, 23, 42, .28) !important;
-    border-radius: 9999px !important;
-    cursor: pointer;
-    box-sizing: border-box !important;
-    animation: tour-pulse 1.8s ease-in-out infinite;
-    }
-
-    .tour-hotspot-arrow::after {
+    /* Upward double chevron (points forward / "go there") */
+    .tour-hotspot-arrow::after,
+    .tour-placement-marker::after {
         content: '';
         position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 16px;
-        height: 16px;
-        border-right: 4px solid #0f172a;
-        border-bottom: 4px solid #0f172a;
-        transform: translate(-50%, -62%) rotate(45deg);
+        inset: 0;
+        pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 11l6-6 6 6' opacity='.55'/%3E%3Cpath d='M6 18l6-6 6 6'/%3E%3C/svg%3E") center / 62% no-repeat;
+        filter: drop-shadow(0 1px 0 rgba(255, 255, 255, .8));
     }
-    .tour-placement-marker {
-        width: 56px;
-        height: 56px;
-        border: 3px solid rgba(15, 23, 42, .35);
+
+    /* Pulsing ring */
+    .tour-hotspot-arrow::before {
+        content: '';
+        position: absolute;
+        inset: -2px;
         border-radius: 9999px;
-        background: rgba(255, 255, 255, .95);
-        cursor: grab;
+        border: 2px solid rgba(255, 255, 255, .85);
+        pointer-events: none;
+        animation: tour-ring 1.9s ease-out infinite;
+    }
+
+    .tour-hotspot-arrow:hover,
+    .tour-hotspot-arrow:focus {
+        filter: brightness(1.05);
         box-shadow:
-            0 3px 10px rgba(0, 0, 0, .45),
-            0 0 0 5px rgba(255, 255, 255, .28);
+            0 0 0 6px rgba(255, 255, 255, .35),
+            0 10px 24px rgba(2, 6, 23, .55),
+            inset 0 -4px 8px rgba(15, 23, 42, .16),
+            inset 0 2px 3px rgba(255, 255, 255, .9);
+        outline: none;
+    }
+
+    /* Owner editor marker: same arrow, blue accent so it's not mistaken for a saved one */
+    .tour-placement-marker {
+        cursor: grab;
         z-index: 20;
+        border-color: #2563eb !important;
+        box-shadow:
+            0 8px 22px rgba(2, 6, 23, .55),
+            0 0 0 5px rgba(37, 99, 235, .25),
+            inset 0 -4px 8px rgba(15, 23, 42, .16),
+            inset 0 2px 3px rgba(255, 255, 255, .9);
     }
 
     .tour-placement-marker:active {
         cursor: grabbing;
     }
 
-    .tour-placement-marker::after {
-        content: '';
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 17px !important;
-        height: 17px !important;
-        border-right: 4px solid #0f172a;
-        border-bottom: 4px solid #0f172a;
-        transform: translate(-50%, -62%) rotate(45deg);
+    @keyframes tour-ring {
+        0%   { transform: scale(1);   opacity: .9; }
+        100% { transform: scale(1.7); opacity: 0; }
     }
 
     .tour-hotspot-info {
+        position: absolute !important;
         width: 28px;
         height: 28px;
         background: #0f172a;
+        border: 2px solid white;
+        border-radius: 9999px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+        transition: box-shadow .15s ease;
     }
 
     .tour-hotspot-info::after {
@@ -115,28 +142,12 @@
         font: 700 16px/1 sans-serif;
     }
 
-    .tour-hotspot-arrow:hover,
-    .tour-hotspot-arrow:focus,
     .tour-hotspot-info:hover,
     .tour-hotspot-info:focus {
         box-shadow:
             0 0 0 4px rgba(255, 255, 255, .45),
             0 2px 8px rgba(0, 0, 0, .4);
         outline: none;
-    }
-
-    @keyframes tour-pulse {
-        0%, 100% {
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, .35),
-                0 0 0 0 rgba(255, 255, 255, .65);
-        }
-
-        50% {
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, .35),
-                0 0 0 12px rgba(255, 255, 255, 0);
-        }
     }
 
     .tour-viewer-overlay {
@@ -213,7 +224,7 @@
     <div class="absolute inset-0" id="{{ $viewerId }}-full" aria-label="Interactive 360 degree virtual tour"></div>
 
     <div class="absolute top-0 inset-x-0 z-20 p-3 sm:p-5 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
-        <div class="flex items-start justify-between gap-3">
+        <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="pointer-events-auto min-w-0">
                 <p id="{{ $viewerId }}-title" class="text-white font-semibold truncate"></p>
                 <p id="{{ $viewerId }}-description" class="text-white/70 text-xs mt-1 max-w-xl truncate"></p>
@@ -344,7 +355,7 @@
                 compass: false,
                 hotSpotDebug: false,
             },
-            scenes: scenes,
+            scenes: JSON.parse(JSON.stringify(scenes)),
         };
     }
     function renderThumbnails() {

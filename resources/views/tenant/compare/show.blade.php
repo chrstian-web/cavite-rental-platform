@@ -16,7 +16,7 @@
             $bestValueId = $properties->sortBy('min_monthly_rent')->first()->id;
         @endphp
         <div class="overflow-x-auto bg-white border border-slate-200 rounded-xl">
-            <table class="w-full text-sm min-w-[600px]">
+            <table class="w-full text-sm min-w-[600px]" data-no-stack>
                 <thead>
                     <tr class="border-b border-slate-200">
                         <th class="p-4 text-left text-slate-400 font-normal w-40">Criteria</th>

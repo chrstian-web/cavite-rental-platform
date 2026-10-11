@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SceneHotspot extends Model
 {
     protected $fillable = [
-        'scene_id', 'target_scene_id', 'position_x', 'position_y', 'position_z', 'label', 'type',
+        'scene_id', 'target_scene_id', 'position_x', 'position_y', 'position_z', 'label', 'type', 'size',
     ];
 
     public function scene(): BelongsTo

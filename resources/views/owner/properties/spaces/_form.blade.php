@@ -131,7 +131,7 @@
         </p>
 
         @if (isset($space) && $space->images->isNotEmpty())
-            <div class="grid grid-cols-4 gap-2 mt-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
                 @foreach ($space->images as $image)
                     <div class="relative group">
                         <img src="{{ asset('storage/'.$image->path) }}" class="w-full h-20 object-cover rounded-lg

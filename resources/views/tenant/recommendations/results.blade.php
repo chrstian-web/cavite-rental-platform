@@ -51,7 +51,7 @@
 
                     <details class="mt-3 pt-3 border-t border-slate-100">
                         <summary class="text-xs text-blue-600 cursor-pointer">See full score breakdown</summary>
-                        <table class="w-full text-xs mt-2">
+                        <table class="w-full text-xs mt-2" data-no-stack>
                             <thead class="text-slate-400 text-left">
                                 <tr><th class="py-1">Criterion</th><th>Raw score</th><th>Weight</th><th>Weighted</th></tr>
                             </thead>

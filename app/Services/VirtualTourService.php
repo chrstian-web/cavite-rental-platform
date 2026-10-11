@@ -87,6 +87,11 @@ class VirtualTourService
 
     public function addHotspot(VirtualTourScene $scene, array $data): SceneHotspot
     {
+        // A null/missing size must fall back to the column default instead of inserting NULL.
+        if (! isset($data['size'])) {
+            unset($data['size']);
+        }
+
         return $scene->hotspots()->create($data);
     }
 

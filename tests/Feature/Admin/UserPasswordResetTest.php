@@ -66,4 +66,57 @@ class UserPasswordResetTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_a_super_admin_can_delete_a_user_without_losing_their_records(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $user = User::factory()->tenant()->create();
+
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $user))
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
+    }
+
+    public function test_an_admin_cannot_delete_themselves_or_another_admin(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $other = User::factory()->superAdmin()->create();
+
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $admin))->assertSessionHasErrors('delete');
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $other))->assertSessionHasErrors('delete');
+
+        $this->assertNotSoftDeleted('users', ['id' => $other->id]);
+    }
+
+    public function test_a_non_admin_cannot_delete_users(): void
+    {
+        $tenant = User::factory()->tenant()->create();
+        $victim = User::factory()->tenant()->create();
+
+        $this->actingAs($tenant)->delete(route('admin.users.destroy', $victim))->assertForbidden();
+    }
+
+    public function test_a_deleted_user_can_be_restored_from_the_deleted_users_page(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $user = User::factory()->tenant()->create();
+        $user->delete();
+
+        $this->actingAs($admin)->get(route('admin.users.deleted'))->assertOk()->assertSee($user->email);
+
+        $this->actingAs($admin)->patch(route('admin.users.restore', $user->id))
+            ->assertRedirect(route('admin.users.deleted'));
+
+        $this->assertNotSoftDeleted('users', ['id' => $user->id]);
+    }
+
+    public function test_only_a_super_admin_can_restore_users(): void
+    {
+        $tenant = User::factory()->tenant()->create();
+        $victim = User::factory()->tenant()->create();
+        $victim->delete();
+
+        $this->actingAs($tenant)->patch(route('admin.users.restore', $victim->id))->assertForbidden();
+    }
 }

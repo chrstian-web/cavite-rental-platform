@@ -4,7 +4,7 @@
 
 @section('content')
     @if (auth()->user()->isOwner() && ! auth()->user()->isOwnerVerified())
-        <div class="mb-6 rounded-2xl border p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between {{ auth()->user()->owner_verification_status === 'rejected' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200' }}">
+        <div data-tour="owner-verification" class="mb-6 rounded-2xl border p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between {{ auth()->user()->owner_verification_status === 'rejected' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200' }}">
             <div>
                 <p class="text-sm font-bold {{ auth()->user()->owner_verification_status === 'rejected' ? 'text-red-800' : 'text-amber-800' }}">
                     @switch(auth()->user()->owner_verification_status)
@@ -26,11 +26,13 @@
         <p class="eyebrow rt-eyebrow">Host portal</p>
         <h1>Welcome, {{ auth()->user()->first_name }}</h1>
         <p>Keep your listings healthy and your tenants supported.</p>
-        <a href="{{ route('owner.properties.create') }}" class="btn-primary btn-tenant mt-4">+ Add Property</a>
+        <a href="{{ route('owner.properties.create') }}" class="btn-primary btn-tenant mt-4" data-tour="add-property">+ Add Property</a>
         @include('partials.landing-mascots')
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    @include('partials.onboarding-checklist')
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" data-tour="owner-stats">
         @foreach ([
             'Properties' => $totalProperties, 'Total Units' => $totalUnits, 'Available Units' => $availableUnits, 'Occupied Units' => $occupiedUnits,
             'Pending Applications' => $pendingApplications, 'Active Tenants' => $activeTenants, 'Pending Maintenance' => $pendingMaintenance, 'Total Property Views' => $totalViews,
@@ -44,7 +46,7 @@
         <div class="surface-card p-5"><p class="eyebrow">Outstanding payments</p><p class="text-2xl font-extrabold text-amber-600 mt-2">₱{{ number_format($outstandingPayments, 2) }}</p><p class="text-xs text-slate-400 mt-1">Pending + overdue</p></div>
     </div>
 
-    <div class="surface-card p-6">
+    <div class="surface-card p-6" data-tour="owner-quick">
         <p class="eyebrow mb-4">Quick actions</p>
         <div class="flex flex-wrap gap-3 text-sm">
             <a href="{{ route('owner.properties.index') }}" class="btn-muted">Manage Properties</a>

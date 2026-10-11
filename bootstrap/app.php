@@ -28,6 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => EnsureUserHasPermission::class,
             'owner.verified' => EnsureOwnerIsVerified::class,
         ]);
+
+        // Lets the site work behind an https tunnel (cloudflared / ngrok) while testing on a phone:
+        // without this Laravel thinks it is on http and builds http:// links the phone blocks.
+        // Only enabled when APP_ENV=local; set your real proxy list for production.
+        if (env('APP_ENV') === 'local') {
+            $middleware->trustProxies(at: '*');
+        }
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->shouldRenderJsonWhen(function ($request, \Throwable $e) {

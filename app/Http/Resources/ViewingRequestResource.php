@@ -16,6 +16,7 @@ class ViewingRequestResource extends JsonResource
             'preferred_time' => $this->preferred_time,
             'message' => $this->message,
             'status' => $this->status,
+            'reschedule_reason' => $this->status === 'rescheduled' ? $this->reschedule_reason : null,
         ];
     }
 }
