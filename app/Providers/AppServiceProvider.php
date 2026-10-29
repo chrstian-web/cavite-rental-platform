@@ -29,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // public/storage is git-ignored, so a fresh deploy (Railway, etc.) has no link and
+        // uploaded property images would 404. Create it once if it is missing.
+        if ($this->app->environment('production') && ! file_exists(public_path('storage'))) {
+            @symlink(storage_path('app/public'), public_path('storage'));
+        }
+
         Gate::policy(Property::class, PropertyPolicy::class);
         Gate::policy(RentalApplication::class, RentalApplicationPolicy::class);
         Gate::policy(ViewingRequest::class, ViewingRequestPolicy::class);

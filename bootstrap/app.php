@@ -31,8 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Lets the site work behind an https tunnel (cloudflared / ngrok) while testing on a phone:
         // without this Laravel thinks it is on http and builds http:// links the phone blocks.
-        // Only enabled when APP_ENV=local; set your real proxy list for production.
-        if (env('APP_ENV') === 'local') {
+        // Enabled when APP_ENV=local, or when a host that terminates https for you
+        // (Railway, Render, ...) sets TRUST_PROXIES=true.
+        if (env('APP_ENV') === 'local' || filter_var(env('TRUST_PROXIES', false), FILTER_VALIDATE_BOOLEAN)) {
             $middleware->trustProxies(at: '*');
         }
     })
