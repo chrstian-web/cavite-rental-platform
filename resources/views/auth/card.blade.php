@@ -6,9 +6,12 @@
     <title>{{ $mode === 'register' ? 'Create Account' : 'Sign In' }} · Cavite Rentals</title>
     <link rel="stylesheet" href="{{ asset('css/auth-card.css') }}?v={{ @filemtime(public_path('css/auth-card.css')) }}">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @include('partials.button-effects')
     @include('partials.pwa')
 </head>
 <body class="auth-page">
+
+    <div class="auth-orbs" aria-hidden="true"><span></span><span></span><span></span></div>
 
     @php
         // Both forms live in the same DOM and can be visually toggled without
@@ -23,6 +26,8 @@
     @endphp
 
 
+    <a href="{{ route('home') }}" class="auth-back" aria-label="Back to home" title="Back to home"></a>
+
     <a href="{{ route('home') }}" class="auth-brand">Cavite<span>Rentals</span></a>
 
     <div class="auth-container {{ $activePanel === 'register' ? 'right-panel-active' : '' }}" id="authContainer">
@@ -34,33 +39,44 @@
                 <input type="hidden" name="_form" value="signup">
                 <h1>Create Account</h1>
 
-                <div class="social-icons">
-                    <a href="#" onclick="return false;" title="Social sign-up isn't available yet">G+</a>
-                    <a href="#" onclick="return false;" title="Social sign-up isn't available yet">f</a>
-                    <a href="#" onclick="return false;" title="Social sign-up isn't available yet">Gh</a>
-                    <a href="#" onclick="return false;" title="Social sign-up isn't available yet">in</a>
-                </div>
-                <p>or use your email for registration</p>
-
                 <div class="name-row">
-                    <input type="text" name="first_name" placeholder="First name" value="{{ old('first_name') }}" required>
-                    <input type="text" name="last_name" placeholder="Last name" value="{{ old('last_name') }}" required>
+                    <div class="field field--plain">
+                        <input type="text" id="signup-first" name="first_name" placeholder=" " value="{{ old('first_name') }}" required @if ($activePanel === 'register') autofocus @endif>
+                        <label for="signup-first">First name</label>
+                    </div>
+                    <div class="field field--plain">
+                        <input type="text" id="signup-last" name="last_name" placeholder=" " value="{{ old('last_name') }}" required>
+                        <label for="signup-last">Last name</label>
+                    </div>
                 </div>
                 @error('first_name') <span class="field-error">{{ $message }}</span> @enderror
                 @error('last_name') <span class="field-error">{{ $message }}</span> @enderror
 
-                <input type="email" name="email" placeholder="Email" value="{{ old('email') }}" required>
+                <div class="field">
+                    <input type="email" id="signup-email" name="email" placeholder=" " value="{{ old('email') }}" required>
+                    <label for="signup-email">Email</label>
+                </div>
                 @error('email') <span class="field-error">{{ $message }}</span> @enderror
 
-                <select name="role" required>
-                    <option value="tenant" @selected(old('role', 'tenant') === 'tenant')>I'm a Tenant / Renter</option>
-                    <option value="owner" @selected(old('role') === 'owner')>I'm a Property Owner</option>
-                </select>
+                <div class="field field--plain field--select">
+                    <select id="signup-role" name="role" required>
+                        <option value="tenant" @selected(old('role', 'tenant') === 'tenant')>I'm a Tenant / Renter</option>
+                        <option value="owner" @selected(old('role') === 'owner')>I'm a Property Owner</option>
+                    </select>
+                    <label for="signup-role">I am a</label>
+                </div>
+                @error('role') <span class="field-error">{{ $message }}</span> @enderror
 
-                <input type="password" name="password" placeholder="Password" required>
+                <div class="field">
+                    <input type="password" id="signup-password" name="password" placeholder=" " required>
+                    <label for="signup-password">Password</label>
+                </div>
                 @error('password') <span class="field-error">{{ $message }}</span> @enderror
 
-                <input type="password" name="password_confirmation" placeholder="Confirm password" required>
+                <div class="field">
+                    <input type="password" id="signup-password2" name="password_confirmation" placeholder=" " required>
+                    <label for="signup-password2">Confirm password</label>
+                </div>
 
                 <button type="submit" class="submit-btn">Sign Up</button>
             </form>
@@ -73,18 +89,16 @@
                 <input type="hidden" name="_form" value="signin">
                 <h1>Sign In</h1>
 
-                <div class="social-icons">
-                    <a href="#" onclick="return false;" title="Social sign-in isn't available yet">G+</a>
-                    <a href="#" onclick="return false;" title="Social sign-in isn't available yet">f</a>
-                    <a href="#" onclick="return false;" title="Social sign-in isn't available yet">Gh</a>
-                    <a href="#" onclick="return false;" title="Social sign-in isn't available yet">in</a>
+                <div class="field">
+                    <input type="email" id="signin-email" name="email" placeholder=" " value="{{ old('email') }}" required @if ($activePanel !== 'register') autofocus @endif>
+                    <label for="signin-email">Email</label>
                 </div>
-                <p>or use your account</p>
-
-                <input type="email" name="email" placeholder="Email" value="{{ old('email') }}" required autofocus>
                 @error('email') <span class="field-error">{{ $message }}</span> @enderror
 
-                <input type="password" name="password" placeholder="Password" required>
+                <div class="field">
+                    <input type="password" id="signin-password" name="password" placeholder=" " required>
+                    <label for="signin-password">Password</label>
+                </div>
                 @error('password') <span class="field-error">{{ $message }}</span> @enderror
 
                 <a href="{{ route('password.request') }}" class="small-link">Forgot your password?</a>
@@ -122,21 +136,39 @@
         </a>
     </p>
 
-    <a href="{{ route('home') }}" class="auth-back">← Back to home</a>
-
     <script>
         const container = document.getElementById('authContainer');
         document.getElementById('showSignUp').addEventListener('click', () => container.classList.add('right-panel-active'));
         document.getElementById('showSignIn').addEventListener('click', () => container.classList.remove('right-panel-active'));
 
+        const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+        const EYE_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.7 10.7 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4.2M6.6 6.6A17 17 0 002 12s3.5 7 10 7c1.9 0 3.6-.5 5-1.3M9.9 9.9a3 3 0 004.2 4.2"/></svg>';
+        document.querySelectorAll('.auth-container input[type="password"]').forEach((input) => {
+            input.classList.add('is-password');
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'pw-toggle';
+            toggle.setAttribute('aria-label', 'Show password');
+            toggle.setAttribute('aria-pressed', 'false');
+            toggle.innerHTML = EYE;
+            toggle.addEventListener('click', () => {
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                toggle.innerHTML = show ? EYE_OFF : EYE;
+                toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+            });
+            input.closest('.field').appendChild(toggle);
+        });
+
         @if ($errors->any())
-            Swal.fire({
+            window.Swal && Swal.fire({
                 toast: true, position: 'top-end', icon: 'error',
                 title: @json($errors->first()), showConfirmButton: false, timer: 4500, timerProgressBar: true,
             });
         @endif
         @if (session('status'))
-            Swal.fire({
+            window.Swal && Swal.fire({
                 toast: true, position: 'top-end', icon: 'success',
                 title: @json(session('status')), showConfirmButton: false, timer: 3500, timerProgressBar: true,
             });

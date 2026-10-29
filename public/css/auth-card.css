@@ -45,16 +45,41 @@ body.auth-page::after {
 
 .auth-brand { font-weight: 800; font-size: 22px; letter-spacing: -.02em; color: #fff; text-decoration: none; margin-bottom: 20px; }
 .auth-brand span { color: #3b82f6; }
-.auth-back { color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none; margin-top: 18px; }
-.auth-back:hover { color: #fff; }
+/* Back arrow: same glass style as .ghost-btn, pinned to the top-left corner.
+   The arrow is drawn here (::before) and any text inside the link is hidden,
+   so it renders correctly even if the old "← Back to home" markup is still cached. */
+.auth-back {
+    position: absolute; top: 20px; left: 20px; z-index: 200;
+    display: block; flex: none; width: 44px; height: 44px; padding: 0; overflow: hidden;
+    font-size: 0; line-height: 0; color: transparent; white-space: nowrap;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .55);
+    border-radius: 10px;
+    text-decoration: none; cursor: pointer;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    transition: background 150ms ease, transform .2s cubic-bezier(.31, -.105, .43, 1.4), box-shadow .2s ease;
+}
+.auth-back::before {
+    content: ""; position: absolute; inset: 0; background: #fff;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5m6-6-6 6 6 6'/%3E%3C/svg%3E") center / 20px 20px no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5m6-6-6 6 6 6'/%3E%3C/svg%3E") center / 20px 20px no-repeat;
+    transition: transform .25s cubic-bezier(.31, -.105, .43, 1.4);
+}
+.auth-back svg { display: none; }
+.auth-back:hover { background: rgba(255, 255, 255, .18); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 0, 0, .35); }
+.auth-back:hover::before { transform: translateX(-3px); }
+.auth-back:active { transform: translateY(0) scale(.96); }
 
 :focus-visible { outline: 3px solid rgba(244, 63, 94, .6); outline-offset: 2px; }
 
 .auth-container {
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background: rgba(22, 27, 34, .52);
+    -webkit-backdrop-filter: blur(26px) saturate(150%);
+    backdrop-filter: blur(26px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, .14);
     border-radius: 30px;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, .03), 0 40px 120px rgba(244, 63, 94, .14), 0 20px 60px rgba(0, 0, 0, .5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 0 0 1px rgba(255, 255, 255, .03), 0 40px 120px rgba(244, 63, 94, .18), 0 20px 60px rgba(0, 0, 0, .5);
+    animation: auth-rise .7s cubic-bezier(.2, .8, .2, 1) backwards;
     position: relative;
     overflow: hidden;
     width: 100%;
@@ -80,21 +105,34 @@ body.auth-page::after {
 .auth-container a.small-link:hover { text-decoration: underline; }
 
 .auth-container button.submit-btn {
-    border-radius: 10px;
-    border: 1px solid var(--rose-d);
-    background: var(--rose-d);
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    border-radius: 12px;
+    border: 0;
+    background: linear-gradient(135deg, #fb7185 0%, #e11d48 55%, #be123c 100%);
     color: #fff;
     font-family: inherit;
     font-size: 14px;
     font-weight: 700;
-    padding: 12px 44px;
+    padding: 13px 44px;
     cursor: pointer;
-    transition: transform 80ms ease-in, background 150ms ease;
-    margin-top: 12px;
+    transition: transform .2s cubic-bezier(.31, -.105, .43, 1.4), box-shadow .2s ease, filter .2s ease;
+    box-shadow: 0 8px 22px rgba(225, 29, 72, .35), inset 0 1px 0 rgba(255, 255, 255, .25);
+    margin-top: 14px;
 }
 
-.auth-container button.submit-btn:hover { background: #be123c; }
-.auth-container button.submit-btn:active { transform: scale(0.97); }
+.auth-container button.submit-btn::before {
+    content: "";
+    position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .4), transparent);
+    transform: skewX(-20deg);
+    transition: left .55s ease;
+}
+
+.auth-container button.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(225, 29, 72, .5), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.auth-container button.submit-btn:hover::before { left: 130%; }
+.auth-container button.submit-btn:active { transform: translateY(0) scale(0.98); }
 
 .auth-container button.ghost-btn {
     background: rgba(255, 255, 255, .06);
@@ -112,7 +150,7 @@ body.auth-page::after {
 .auth-container button.ghost-btn:hover { background: rgba(255, 255, 255, 0.18); }
 
 .auth-container form {
-    background: var(--surface);
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -124,11 +162,11 @@ body.auth-page::after {
 
 .auth-container input,
 .auth-container select {
-    background: var(--bg);
+    background-color: rgba(255, 255, 255, .06);
     color: #fff;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 12px 15px;
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 12px;
+    padding: 13px 15px;
     margin: 6px 0;
     width: 100%;
     font-family: inherit;
@@ -139,7 +177,7 @@ body.auth-page::after {
 
 .auth-container input::placeholder { color: var(--muted); }
 .auth-container input:focus,
-.auth-container select:focus { border-color: var(--rose); box-shadow: 0 0 0 3px rgba(244, 63, 94, .22); }
+.auth-container select:focus { border-color: var(--rose); background-color: rgba(255, 255, 255, .09); box-shadow: 0 0 0 3px rgba(244, 63, 94, .22), 0 8px 24px rgba(244, 63, 94, .12); }
 .auth-container select option { color: #0f172a; background: #fff; }
 
 .auth-container .name-row { display: flex; gap: 8px; width: 100%; }
@@ -152,23 +190,10 @@ body.auth-page::after {
     color: #fff;
 }
 
-.social-icons { margin: 14px 0 4px; display: flex; gap: 10px; }
-
-.social-icons a {
-    border: 1px solid var(--line);
-    background: var(--bg);
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: not-allowed;
-    opacity: 0.55;
+.form-container h1 {
+    background: linear-gradient(180deg, #fff 30%, #fda4af 130%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
 }
 
 .field-error { color: #ff7a93; font-size: 12px; width: 100%; text-align: left; margin-top: -2px; margin-bottom: 4px; }
@@ -177,10 +202,13 @@ body.auth-page::after {
 
 .form-container { position: absolute; top: 0; height: 100%; transition: all 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
 
-.sign-up-container { left: 0; width: 50%; opacity: 0; z-index: 1; }
+.sign-up-container { left: 0; width: 50%; opacity: 0; z-index: 1; visibility: hidden; pointer-events: none; }
 .sign-in-container { left: 0; width: 50%; z-index: 2; }
 
-.auth-container.right-panel-active .sign-in-container { transform: translateX(100%); }
+/* The card is glass now, so the form that is not showing must actually disappear
+   (it used to be hidden behind an opaque form background). */
+.auth-container.right-panel-active .sign-in-container { transform: translateX(100%); opacity: 0; visibility: hidden; pointer-events: none; }
+.auth-container.right-panel-active .sign-up-container { visibility: visible; pointer-events: auto; }
 
 .auth-container.right-panel-active .sign-up-container {
     transform: translateX(100%);
@@ -232,7 +260,7 @@ body.auth-page::after {
 .overlay-panel {
     position: absolute; top: 0;
     display: flex; align-items: center; justify-content: center; flex-direction: column;
-    padding: 0 40px; text-align: center; height: 100%; width: 50%;
+    padding: 0 40px; text-align: center; height: 100%; width: 50%; z-index: 1;
     transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
@@ -253,6 +281,7 @@ body.auth-page::after {
 
 @media (max-width: 680px) {
     body.auth-page { padding: 16px; }
+    .auth-back { display: none; }
 
     .auth-container { min-height: 0; width: 100%; max-width: 420px; margin: 0 auto; }
 
@@ -301,4 +330,109 @@ body.auth-page::after {
 
 @media (prefers-reduced-motion: reduce) {
     .form-container, .overlay-container, .overlay, .overlay-panel { transition: none; }
+    .auth-container, .form-container form > *, .auth-orbs span, .overlay::after, .overlay-panel .lp-mascots svg { animation: none !important; }
+    .auth-container button.submit-btn, .auth-container button.submit-btn::before { transition: none; }
+    .auth-back, .auth-back::before { transition: none; }
+}
+
+
+/* ── Glass finish ────────────────────────────────────────────── */
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .auth-container { background: rgba(22, 27, 34, .94); }
+}
+
+/* Soft colour blobs behind the card, so the glass has something to blur */
+.auth-orbs { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.auth-orbs span { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; animation: auth-drift 18s ease-in-out infinite alternate; }
+.auth-orbs span:nth-child(1) { width: 380px; height: 380px; background: #f43f5e; left: calc(50% - 560px); top: 18%; }
+.auth-orbs span:nth-child(2) { width: 420px; height: 420px; background: #3b82f6; right: calc(50% - 600px); bottom: 6%; animation-duration: 22s; animation-delay: -6s; }
+.auth-orbs span:nth-child(3) { width: 280px; height: 280px; background: #8b5cf6; left: calc(50% - 120px); top: -80px; opacity: .4; animation-duration: 26s; animation-delay: -12s; }
+@keyframes auth-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, -30px) scale(1.12); } }
+
+@keyframes auth-rise { from { opacity: 0; transform: translateY(22px) scale(.985); } }
+@keyframes auth-field { from { opacity: 0; transform: translateY(10px); } }
+.form-container form > * { animation: auth-field .5s cubic-bezier(.2, .8, .2, 1) backwards; }
+.form-container form > *:nth-child(n+3) { animation-delay: .12s; }
+.form-container form > *:nth-child(n+5) { animation-delay: .18s; }
+.form-container form > *:nth-child(n+7) { animation-delay: .24s; }
+.form-container form > *:nth-child(n+9) { animation-delay: .3s; }
+
+/* Light sheen drifting across the colour panel */
+.overlay::after {
+    content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .11) 50%, transparent 60%);
+    transform: translateX(-100%);
+    animation: auth-sheen 7s ease-in-out infinite;
+}
+@keyframes auth-sheen { 0%, 55% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* The three mascots bob gently */
+.overlay-panel .lp-mascots svg { animation: auth-float 4s ease-in-out infinite; animation-delay: var(--d, 0s); }
+@keyframes auth-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* Field icons (no extra markup needed) */
+.auth-container input[type="email"],
+.auth-container input[type="password"],
+.auth-container input.is-password { padding-left: 44px; background-repeat: no-repeat; background-position: 15px 50%; background-size: 18px; }
+.auth-container input[type="email"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='M3 7l9 6 9-6'/%3E%3C/svg%3E"); }
+.auth-container input[type="email"]:focus { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fb7185' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='M3 7l9 6 9-6'/%3E%3C/svg%3E"); }
+.auth-container input[type="password"],
+.auth-container input.is-password { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 018 0v4'/%3E%3C/svg%3E"); padding-right: 46px; }
+.auth-container input[type="password"]:focus,
+.auth-container input.is-password:focus { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fb7185' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 018 0v4'/%3E%3C/svg%3E"); }
+.auth-container select {
+    -webkit-appearance: none; appearance: none; padding-right: 42px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 18px;
+}
+
+/* Show / hide password */
+.pw-wrap { position: relative; width: 100%; }
+.pw-toggle {
+    position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+    display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
+    border: 0; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+.pw-toggle:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+.pw-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Browser autofill would otherwise paint a pale box over the glass */
+.auth-container input:-webkit-autofill {
+    -webkit-text-fill-color: #fff; caret-color: #fff;
+    -webkit-box-shadow: 0 0 0 1000px rgba(20, 26, 36, .92) inset;
+    transition: background-color 9999s ease-in-out 0s;
+}
+
+
+/* ── Floating labels ─────────────────────────────────────────── */
+
+.auth-container .field { position: relative; width: 100%; margin: 6px 0; }
+.auth-container .name-row .field { flex: 1; min-width: 0; }
+.auth-container .field input,
+.auth-container .field select { margin: 0; height: 56px; padding-top: 22px; padding-bottom: 6px; line-height: 1.2; }
+
+.auth-container .field label {
+    position: absolute; left: 44px; top: 50%;
+    transform: translateY(-50%); transform-origin: left center;
+    color: var(--muted); font-size: 14px; font-weight: 500; line-height: 1;
+    pointer-events: none; white-space: nowrap;
+    transition: top .2s cubic-bezier(.2, .8, .2, 1), transform .2s cubic-bezier(.2, .8, .2, 1), font-size .2s cubic-bezier(.2, .8, .2, 1), color .2s ease;
+}
+.auth-container .field--plain label { left: 16px; }
+
+/* Lifted: focused, filled in, autofilled, or a dropdown (always has a value) */
+.auth-container .field input:focus + label,
+.auth-container .field input:not(:placeholder-shown) + label,
+.auth-container .field input:-webkit-autofill + label,
+.auth-container .field select + label {
+    top: 10px; transform: translateY(0); font-size: 11px; font-weight: 700; letter-spacing: .03em; color: #fb7185;
+}
+.auth-container .field input:not(:focus):not(:placeholder-shown) + label,
+.auth-container .field select:not(:focus) + label { color: var(--muted); }
+
+.form-container h1 { margin-bottom: 18px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-container .field label { transition: none; }
 }
