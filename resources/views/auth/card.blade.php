@@ -167,6 +167,12 @@
                 title: @json($errors->first()), showConfirmButton: false, timer: 4500, timerProgressBar: true,
             });
         @endif
+        @if (session('session_expired'))
+            window.Swal && Swal.fire({
+                toast: true, position: 'top-end', icon: 'warning',
+                title: @json(session('session_expired')), showConfirmButton: false, timer: 5000, timerProgressBar: true,
+            });
+        @endif
         @if (session('status'))
             window.Swal && Swal.fire({
                 toast: true, position: 'top-end', icon: 'success',
