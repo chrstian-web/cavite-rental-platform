@@ -124,11 +124,35 @@
                                         <p class="font-medium text-sm text-slate-900">{{ $scene->title }}</p>
                                         <p class="text-xs text-slate-400">{{ $scene->hotspots->count() }} hotspot(s)</p>
                                     </div>
-                                    <form action="{{ route('owner.properties.tour.scenes.destroy', [$property, $tour, $scene]) }}" method="POST"
-                                          onsubmit="return confirm('Remove this scene?')">
-                                        @csrf @method('DELETE')
-                                        <x-delete-button label="Remove" />
-                                    </form>
+                                    <div class="flex items-center gap-2">
+                                        <details class="relative">
+                                            <summary class="inline-flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Edit</summary>
+                                            <div class="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl">
+                                                <form action="{{ route('owner.properties.tour.scenes.update', [$property, $tour, $scene]) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                                                    @csrf @method('PUT')
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-slate-600 mb-1">Scene title</label>
+                                                        <input type="text" name="title" value="{{ $scene->title }}" required class="w-full rounded-lg border-slate-300 text-sm">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-slate-600 mb-1">Replace panorama image</label>
+                                                        <input type="file" name="panorama_image" accept="image/*" class="w-full text-xs">
+                                                        <p class="mt-1 text-[11px] text-slate-400">Leave empty to keep the current image.</p>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-slate-600 mb-1">Description</label>
+                                                        <textarea name="description" rows="2" class="w-full rounded-lg border-slate-300 text-sm">{{ $scene->description }}</textarea>
+                                                    </div>
+                                                    <button type="submit" class="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">Save changes</button>
+                                                </form>
+                                            </div>
+                                        </details>
+                                        <form action="{{ route('owner.properties.tour.scenes.destroy', [$property, $tour, $scene]) }}" method="POST"
+                                              onsubmit="return confirm('Remove this scene?')">
+                                            @csrf @method('DELETE')
+                                            <x-delete-button label="Remove" />
+                                        </form>
+                                    </div>
                                 </div>
 
                                 <div class="mt-3 flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">

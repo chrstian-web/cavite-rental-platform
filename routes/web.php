@@ -88,6 +88,8 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('properties/{property}/images/{image}', [PropertyImageController::class, 'destroy'])
             ->name('properties.images.destroy');
+        Route::patch('properties/{property}/images/{image}', [PropertyImageController::class, 'update'])
+            ->name('properties.images.update');
         Route::patch('properties/{property}/images/{image}/cover', [PropertyImageController::class, 'makeCover'])
             ->name('properties.images.cover');
 
@@ -98,6 +100,7 @@ Route::middleware('auth')->group(function () {
         Route::put('properties/{property}/spaces/{space}', [RentalSpaceController::class, 'update'])->name('properties.spaces.update');
         Route::delete('properties/{property}/spaces/{space}', [RentalSpaceController::class, 'destroy'])->name('properties.spaces.destroy');
         Route::delete('properties/{property}/spaces/{space}/images/{image}', [RentalSpaceImageController::class, 'destroy'])->name('properties.spaces.images.destroy');
+        Route::patch('properties/{property}/spaces/{space}/images/{image}', [RentalSpaceImageController::class, 'update'])->name('properties.spaces.images.update');
         Route::patch('properties/{property}/spaces/{space}/images/{image}/cover', [RentalSpaceImageController::class, 'makeCover'])->name('properties.spaces.images.cover');
 
         // Virtual tour management
