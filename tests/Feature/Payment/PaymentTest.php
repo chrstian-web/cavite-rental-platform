@@ -49,6 +49,9 @@ class PaymentTest extends TestCase
             'amount' => 8000,
             'status' => 'paid',
         ]);
+        $payment = $contract->payments()->firstOrFail();
+        $this->assertNotNull($payment->paid_at);
+        $this->assertNotEmpty($payment->receipt_number);
     }
 
     public function test_an_owner_cannot_record_a_payment_for_another_owners_contract(): void

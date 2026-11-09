@@ -41,10 +41,10 @@
     @endphp
     <div class="bg-white border border-slate-200 rounded-xl p-5 mb-6">
         <ul class="space-y-2 text-sm">
-            <li class="flex items-center gap-2"><span class="{{ $steps['account'] ? 'text-green-600' : 'text-slate-300' }}">{{ $steps['account'] ? '✓' : '○' }}</span> Account Created</li>
-            <li class="flex items-center gap-2"><span class="{{ $steps['submitted'] ? 'text-green-600' : 'text-slate-300' }}">{{ $steps['submitted'] ? '✓' : '○' }}</span> Documents Submitted</li>
-            <li class="flex items-center gap-2"><span class="{{ $steps['review'] ? 'text-green-600' : ($steps['submitted'] ? 'text-amber-500' : 'text-slate-300') }}">{{ $steps['review'] ? '✓' : ($steps['submitted'] ? '●' : '○') }}</span> Verification Review</li>
-            <li class="flex items-center gap-2"><span class="{{ $steps['active'] ? 'text-green-600' : 'text-slate-300' }}">{{ $steps['active'] ? '✓' : '○' }}</span> Owner Account Activated</li>
+            <li class="flex items-center gap-2"><span class="{{ $steps['account'] ? 'text-green-600' : 'text-slate-400' }}">{{ $steps['account'] ? '✓' : '○' }}</span> Account Created</li>
+            <li class="flex items-center gap-2"><span class="{{ $steps['submitted'] ? 'text-green-600' : 'text-slate-400' }}">{{ $steps['submitted'] ? '✓' : '○' }}</span> Documents Submitted</li>
+            <li class="flex items-center gap-2"><span class="{{ $steps['review'] ? 'text-green-600' : ($steps['submitted'] ? 'text-amber-500' : 'text-slate-400') }}">{{ $steps['review'] ? '✓' : ($steps['submitted'] ? '●' : '○') }}</span> Verification Review</li>
+            <li class="flex items-center gap-2"><span class="{{ $steps['active'] ? 'text-green-600' : 'text-slate-400' }}">{{ $steps['active'] ? '✓' : '○' }}</span> Owner Account Activated</li>
         </ul>
     </div>
 

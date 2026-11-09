@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\ReviewPaymentRequest;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Payment;
+use App\Models\Property;
 use App\Models\RentalContract;
 use App\Services\PaymentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -52,9 +54,77 @@ class PaymentController extends Controller
         return view('owner.payments.index', compact('payments', 'status', 'pendingReviewCount'));
     }
 
-    public function show(Payment $payment): View
+    /**
+     * Kanban-style board: every payment for this owner's/manager's contracts,
+     * grouped by what needs attention. Month filter applies to due date, but
+     * unpaid past-due payments always show so nothing late is hidden.
+     */
+    public function board(Request $request): View
+    {
+        $user = $request->user();
+
+        $month = $request->string('month')->value();
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month) ? $month : now()->format('Y-m');
+        $start = Carbon::createFromFormat('Y-m-d', $month.'-01')->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        $search = trim($request->string('q')->value());
+        $propertyId = $request->input('property_id');
+
+        $scope = fn ($q) => $q->when($user->isOwner(), fn ($q2) => $q2->where('owner_id', $user->id))
+            ->when($user->isManager(), fn ($q2) => $q2->whereHas('property.managers', fn ($q3) => $q3->where('users.id', $user->id)))
+            ->when($propertyId, fn ($q2) => $q2->where('property_id', $propertyId));
+
+        $all = Payment::query()
+            ->with(['contract.property', 'contract.rentalSpace', 'tenant'])
+            ->whereHas('contract', $scope)
+            ->when($search !== '', fn ($q) => $q->whereHas('tenant', fn ($t) => $t
+                ->where('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")))
+            ->where(fn ($q) => $q
+                ->whereBetween('due_date', [$start->toDateString(), $end->toDateString()])
+                ->orWhere(fn ($late) => $late->whereIn('status', ['pending', 'overdue'])->where('due_date', '<', today())))
+            ->orderBy('due_date')
+            ->get();
+
+        $isLate = fn (Payment $p) => $p->status === 'overdue' || $p->isPastDue();
+
+        $columns = [
+            'overdue' => $all->filter($isLate)->values(),
+            'to_collect' => $all->filter(fn ($p) => $p->status === 'pending' && ! $isLate($p))->values(),
+            'review' => $all->where('status', 'submitted')->values(),
+            'paid' => $all->where('status', 'paid')->values(),
+            'rejected' => $all->where('status', 'failed')->values(),
+        ];
+
+        $inMonth = $all->filter(fn ($p) => $p->due_date->betweenIncluded($start, $end) && $p->status !== 'failed');
+        $expected = (float) $inMonth->sum('amount');
+        $collected = (float) $inMonth->where('status', 'paid')->sum('amount');
+
+        return view('owner.payments.board', [
+            'columns' => $columns,
+            'month' => $month,
+            'search' => $search,
+            'propertyId' => $propertyId,
+            'stats' => [
+                'expected' => $expected,
+                'collected' => $collected,
+                'rate' => $expected > 0 ? (int) round($collected / $expected * 100) : 0,
+            ],
+            'properties' => Property::query()
+                ->when($user->isOwner(), fn ($q) => $q->where('owner_id', $user->id))
+                ->when($user->isManager(), fn ($q) => $q->whereHas('managers', fn ($m) => $m->where('users.id', $user->id)))
+                ->orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    public function show(Payment $payment): View|RedirectResponse
     {
         $this->authorize('view', $payment);
+
+        if ($payment->rental_application_id) {
+            return redirect()->route('owner.applications.show', $payment->rental_application_id);
+        }
 
         $payment->load(['contract.property', 'tenant', 'reviewer', 'statusHistories.actor']);
 
@@ -98,7 +168,7 @@ class PaymentController extends Controller
 
         abort_unless($payment->status === 'paid', 404, 'A receipt is only available for an approved payment.');
 
-        $payment->load(['contract.property', 'contract.tenant', 'reviewer']);
+        $payment->load(['contract.property', 'contract.tenant', 'application.property', 'tenant', 'reviewer']);
 
         $pdf = Pdf::loadView('pdf.payment-receipt', ['payment' => $payment]);
 
@@ -114,7 +184,16 @@ class PaymentController extends Controller
         $data = $request->validated();
         $data['user_id'] = $contract->user_id;
 
-        $contract->payments()->create($data);
+        $payment = $contract->payments()->create($data);
+        if ($payment->status === 'paid') {
+            $payment->update([
+                'payment_date' => $payment->payment_date ?? today(),
+                'paid_at' => now(),
+                'receipt_number' => $payment->receipt_number ?: 'RCT-'.now()->format('Ymd').'-'.str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT),
+                'reviewed_by' => $request->user()->id,
+                'reviewed_at' => now(),
+            ]);
+        }
 
         return back()->with('status', 'Payment recorded.');
     }

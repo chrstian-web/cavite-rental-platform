@@ -42,11 +42,13 @@ class RentalApplicationStatusNotification extends Notification
 
     public function toArray(object $notifiable): array
     {
-        return [
+        $data = [
             'type' => 'rental_application_status',
             'application_id' => $this->application->id,
             'property_name' => $this->application->property->name,
             'status' => $this->application->status,
         ];
+
+        return $data;
     }
 }

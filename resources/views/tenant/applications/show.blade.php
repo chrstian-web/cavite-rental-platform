@@ -25,14 +25,67 @@
             </div>
         @endif
 
+        @if (request('checkout') === 'success')
+            <div class="mb-4 text-sm bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800">
+                Checkout returned successfully. Your payment will be confirmed here once the payment provider verifies it.
+            </div>
+        @elseif (request('checkout') === 'cancelled')
+            <div class="mb-4 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
+                Checkout was cancelled. You can review the terms and try again whenever you are ready.
+            </div>
+        @endif
+
         <dl class="grid grid-cols-2 gap-y-2 text-sm">
             <dt class="text-slate-500">Desired move-in</dt>
             <dd class="text-slate-900">{{ $application->desired_move_in_date->format('M j, Y') }}</dd>
+            <dt class="text-slate-500">Requested lease end</dt>
+            <dd class="text-slate-900">{{ $application->lease_end_date?->format('M j, Y') ?? '—' }}</dd>
             <dt class="text-slate-500">Occupants</dt>
             <dd class="text-slate-900">{{ $application->number_of_occupants }}</dd>
             <dt class="text-slate-500">Employment</dt>
             <dd class="text-slate-900">{{ $application->employment_status ? str($application->employment_status)->replace('_',' ')->title() : '—' }}</dd>
         </dl>
+
+        @if ($application->status === 'approved' && $application->reservation_offer_sent_at)
+            <section class="mt-5 border-t border-slate-100 pt-5">
+                <h2 class="text-base font-semibold text-slate-900">Reservation fee and owner’s terms</h2>
+                <p class="mt-2 text-sm text-slate-600">Reservation fee: <strong>₱{{ number_format((float) $application->reservation_fee, 2) }}</strong></p>
+                <div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap">{{ $application->reservation_terms }}</div>
+
+                @if ($application->reservationFeePayment?->status === 'paid')
+                    @if ($application->reservationFeePayment->gateway === 'fake')
+                        <p class="mt-4 rounded-lg bg-amber-50 border border-amber-300 p-3 text-sm text-amber-900">
+                             {{ str($application->reservationFeePayment->payment_method)->replace('_', ' ') }}.
+                        </p>
+                    @else
+                        <p class="mt-4 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-800">
+                            Reservation fee paid and confirmed by the payment provider. The owner has been notified and can proceed with the rental contract.
+                        </p>
+                    @endif
+                @else
+                    @if ($application->reservationFeePayment?->status === 'pending')
+                        <p class="mt-4 text-sm text-amber-700">Reservation fee payment is awaiting confirmation. Do not pay again if your provider is still processing it.</p>
+                    @endif
+                    @include('partials.paymongo-payment-methods')
+                    @if ((config('services.payment_gateway') === 'fake' && app()->environment(['local', 'testing'])) || (config('services.payment_gateway') === 'paymongo' && filled(config('services.paymongo.secret_key')) && filled(config('services.paymongo.webhook_secret')) && count(config('services.paymongo.payment_methods', [])) > 0))
+                        <form method="POST" action="{{ route('tenant.applications.reservation-fee.pay', $application) }}" class="mt-4 space-y-3">
+                            @csrf
+                            <label class="flex items-start gap-2 text-sm text-slate-700">
+                                <input type="checkbox" name="terms_accepted" value="1" required class="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                <span>I confirm that I have read and agree to the reservation terms and conditions above.</span>
+                            </label>
+                            @error('terms_accepted') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                            @error('online') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                            <button type="submit" class="min-h-10 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
+                                Agree and pay ₱{{ number_format((float) $application->reservation_fee, 2) }}
+                            </button>
+                        </form>
+                    @endif
+                @endif
+            </section>
+        @elseif ($application->status === 'approved')
+            <p class="mt-5 rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">Your application is approved. The owner will send the reservation fee and terms separately.</p>
+        @endif
 
         @if ($application->documents->isNotEmpty())
             <div class="mt-4 pt-4 border-t border-slate-100">

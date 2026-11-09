@@ -108,6 +108,8 @@ class PaymentService
                 'payment_method' => $data['payment_method'],
                 'reference_number' => $data['reference_number'] ?? null,
                 'payment_date' => $data['payment_date'],
+                'paid_at' => $payment->paid_at ?? now(),
+                'receipt_number' => $payment->receipt_number ?: 'RCT-'.now()->format('Ymd').'-'.str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT),
                 'status' => 'paid',
                 'reviewed_by' => $reviewer->id,
                 'reviewed_at' => now(),
@@ -156,6 +158,9 @@ class PaymentService
                 'status' => $toStatus,
                 'reviewed_by' => $reviewer->id,
                 'reviewed_at' => now(),
+                'payment_date' => $toStatus === 'paid' ? ($payment->payment_date ?? today()) : $payment->payment_date,
+                'paid_at' => $toStatus === 'paid' ? ($payment->paid_at ?? now()) : $payment->paid_at,
+                'receipt_number' => $toStatus === 'paid' ? ($payment->receipt_number ?: 'RCT-'.now()->format('Ymd').'-'.str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT)) : $payment->receipt_number,
                 'review_reason' => $reason,
             ]);
 

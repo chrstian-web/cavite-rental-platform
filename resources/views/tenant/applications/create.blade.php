@@ -21,8 +21,8 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
          x-data="{
             status: @js(old('employment_status', '')),
-            get isStudent() { return this.status === 'student'; },
-            get needsIds() { return ['employed', 'self_employed', 'unemployed'].includes(this.status); }
+            get needsDocuments() { return ['employed', 'self_employed', 'student', 'unemployed'].includes(this.status); },
+            get proofIncomeLabel() { return this.status === 'student' ? 'Proof of income of parents/guardian' : 'Proof of income'; }
          }">
 
         {{-- ───────── Form ───────── --}}
@@ -36,7 +36,7 @@
                     <span class="grid place-items-center w-7 h-7 rounded-full bg-rose-600 text-white text-xs font-bold">1</span>
                     Move-in details
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Desired move-in date <span class="text-rose-600">*</span></label>
                         <input type="date" name="desired_move_in_date" required min="{{ now()->toDateString() }}"
@@ -44,9 +44,10 @@
                                class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Length of stay (months)</label>
-                        <input type="number" name="length_of_stay_months" min="1" max="60" value="{{ old('length_of_stay_months') }}"
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Lease end date <span class="text-rose-600">*</span></label>
+                        <input type="date" name="lease_end_date" required value="{{ old('lease_end_date') }}"
                                class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
+                        @error('lease_end_date') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Number of occupants <span class="text-rose-600">*</span></label>
@@ -118,27 +119,22 @@
                 </h2>
                 <p class="text-sm text-slate-500 mb-5 ml-10">The documents we ask for depend on your employment status.</p>
 
-                <p x-show="!isStudent && !needsIds" class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-400">
+                <p x-show="!needsDocuments" class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-400">
                     Choose your employment status above to see which documents to upload.
                 </p>
 
-                {{-- Student --}}
-                <div x-show="isStudent" x-cloak>
-                    <p class="text-sm text-slate-600 mb-4">As a student, please upload your <strong>student ID</strong> and a <strong>valid ID of each parent or guardian</strong> (2 IDs).</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @include('partials.file-upload', ['key' => 'student_id', 'label' => 'Student ID', 'when' => 'isStudent'])
-                        <div class="hidden md:block"></div>
-                        @include('partials.file-upload', ['key' => 'parent_id_1', 'label' => "Parent/guardian's valid ID (1 of 2)", 'when' => 'isStudent'])
-                        @include('partials.file-upload', ['key' => 'parent_id_2', 'label' => "Parent/guardian's valid ID (2 of 2)", 'when' => 'isStudent'])
+                {{-- All employment statuses --}}
+                <div x-show="needsDocuments" x-cloak>
+                    <p x-show="status === 'student'" x-cloak class="text-sm text-slate-600 mb-4">Students may upload <strong>any form of identification</strong> as proof of identity; it does not need to be government-issued.</p>
+                    <p x-show="status !== 'student'" x-cloak class="text-sm text-slate-600 mb-4">Please upload <strong>1 valid government-issued ID</strong> (for example a driver's license, passport, UMID or PhilSys ID).</p>
+                    <div class="grid grid-cols-1 gap-4">
+                        @include('partials.file-upload', ['key' => 'valid_id_1', 'label' => 'Identification document', 'when' => 'needsDocuments'])
                     </div>
-                </div>
-
-                {{-- Employed / self-employed / unemployed --}}
-                <div x-show="needsIds" x-cloak>
-                    <p class="text-sm text-slate-600 mb-4">Please upload <strong>2 valid government-issued IDs</strong> (for example a driver's license, passport, UMID or PhilSys ID).</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @include('partials.file-upload', ['key' => 'valid_id_1', 'label' => 'Valid ID (1 of 2)', 'when' => 'needsIds'])
-                        @include('partials.file-upload', ['key' => 'valid_id_2', 'label' => 'Valid ID (2 of 2)', 'when' => 'needsIds'])
+                    <div class="mt-5 border-t border-slate-100 pt-5">
+                        <h3 class="text-sm font-semibold text-slate-800 mb-1" x-text="proofIncomeLabel">Proof of income</h3>
+                        <p x-show="status === 'student'" x-cloak class="text-sm text-slate-500 mb-3">Upload a document showing your parents' or guardian's income or financial support.</p>
+                        <p x-show="status !== 'student'" x-cloak class="text-sm text-slate-500 mb-3">Upload a document that supports your income or financial support.</p>
+                        @include('partials.file-upload', ['key' => 'proof_of_income', 'label' => 'Proof of income', 'when' => 'needsDocuments', 'labelExpression' => 'proofIncomeLabel'])
                     </div>
                 </div>
 

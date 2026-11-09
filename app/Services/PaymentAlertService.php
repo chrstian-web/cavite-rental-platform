@@ -29,7 +29,7 @@ class PaymentAlertService
         }
 
         $payments = Payment::query()
-            ->with(['tenant', 'contract.property', 'contract.rentalSpace'])
+            ->with(['tenant', 'contract.property', 'contract.rentalSpace', 'application.property', 'application.rentalSpace'])
             ->whereIn('id', $notifications->map(fn ($n) => $n->data['payment_id'] ?? null)->filter()->unique())
             ->get()
             ->keyBy('id');
@@ -55,11 +55,15 @@ class PaymentAlertService
         $name = trim(($tenant->first_name ?? '').' '.($tenant->last_name ?? '')) ?: 'A tenant';
         $amount = '₱'.number_format((float) $payment->amount, 2);
         $contract = $payment->contract;
+        $application = $payment->application;
+        $isDemo = $payment->gateway === 'fake';
 
         $method = $payment->payment_method ?: ($payment->isOnline() ? 'online' : null);
 
         [$kind, $headline, $status] = match ($type) {
-            'online_payment_received' => ['online', "{$name} paid {$amount}", 'Paid online · confirmed'],
+            'online_payment_received' => $isDemo
+                ? ['online', "Payment recorded for {$amount}", 'Payment received']
+                : ['online', "{$name} paid {$amount}", 'Paid online · confirmed'],
             'payment_submitted' => ['review', "{$name} submitted {$amount}", $payment->status === 'submitted' ? 'Needs your review' : ucfirst(str_replace('_', ' ', $payment->status))],
             default => ['details', "{$name} added payment proof", 'Proof added'],
         };
@@ -73,13 +77,15 @@ class PaymentAlertService
             'initials' => mb_strtoupper(mb_substr($tenant->first_name ?? '?', 0, 1).mb_substr($tenant->last_name ?? '', 0, 1)),
             'amount' => $amount,
             'type_label' => $payment->typeLabel(),
-            'place' => trim(($contract?->property?->name ?? '').' — '.($contract?->rentalSpace?->space_number ?? ''), ' —'),
+            'place' => trim((($application?->property?->name ?? $contract?->property?->name) ?? '').' — '.(($application?->rentalSpace?->space_number ?? $contract?->rentalSpace?->space_number) ?? ''), ' —'),
             'method' => $method ? (string) str($method)->replace('_', ' ')->title() : null,
             'reference' => $payment->reference_number ?: $payment->gateway_reference,
             'has_proof' => (bool) $payment->proof_path,
             'status' => $status,
             'when' => $createdAt->diffForHumans(),
-            'url' => route('owner.payments.show', $payment),
+            'url' => $application
+                ? route('owner.applications.show', $application)
+                : route('owner.payments.show', $payment),
         ];
     }
 }

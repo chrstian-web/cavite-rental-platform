@@ -34,16 +34,25 @@
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" data-tour="owner-stats">
         @foreach ([
-            'Properties' => $totalProperties, 'Total Units' => $totalUnits, 'Available Units' => $availableUnits, 'Occupied Units' => $occupiedUnits,
-            'Pending Applications' => $pendingApplications, 'Active Tenants' => $activeTenants, 'Pending Maintenance' => $pendingMaintenance, 'Total Property Views' => $totalViews,
-        ] as $label => $value)
-            <div class="surface-card p-5"><p class="text-xs font-semibold text-slate-500">{{ $label }}</p><p class="text-2xl font-extrabold text-slate-950 mt-1">{{ $value }}</p></div>
+            ['Properties', $totalProperties, route('owner.properties.index')],
+            ['Total Units', $totalUnits, $unitsUrl],
+            ['Available Units', $availableUnits, $unitsUrl],
+            ['Occupied Units', $occupiedUnits, $unitsUrl],
+            ['Pending Applications', $pendingApplications, route('owner.applications.index', ['status' => 'pending'])],
+            ['Active Tenants', $activeTenants, route('owner.contracts.index', ['status' => 'active'])],
+            ['Pending Maintenance', $pendingMaintenance, route('owner.maintenance.index', ['status' => 'open'])],
+            ['Total Property Views', $totalViews, route('owner.properties.index')],
+        ] as [$label, $value, $url])
+            <a href="{{ $url }}" class="surface-card block p-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400" aria-label="{{ $label }}: {{ $value }}. View details">
+                <p class="text-xs font-semibold text-slate-500">{{ $label }}</p>
+                <p class="text-2xl font-extrabold text-slate-950 mt-1">{{ $value }}</p>
+            </a>
         @endforeach
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div class="surface-card p-5"><p class="eyebrow">Revenue this month</p><p class="text-2xl font-extrabold text-emerald-600 mt-2">₱{{ number_format($monthlyRevenue, 2) }}</p><p class="text-xs text-slate-400 mt-1">Paid successfully</p></div>
-        <div class="surface-card p-5"><p class="eyebrow">Outstanding payments</p><p class="text-2xl font-extrabold text-amber-600 mt-2">₱{{ number_format($outstandingPayments, 2) }}</p><p class="text-xs text-slate-400 mt-1">Pending + overdue</p></div>
+        <div class="surface-card p-5"><p class="eyebrow">Revenue this month</p><p class="text-2xl font-extrabold text-emerald-600 mt-2">₱{{ number_format($monthlyRevenue, 2) }}</p><p class="text-xs text-slate-400 mt-1">Paid successfully</p><a href="{{ route('owner.payments.board') }}" class="group mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 text-xs font-bold text-emerald-500 hover:bg-emerald-500/20 hover:border-emerald-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors">See who paid <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></a></div>
+        <div class="surface-card p-5"><p class="eyebrow">Outstanding payments</p><p class="text-2xl font-extrabold text-amber-600 mt-2">₱{{ number_format($outstandingPayments, 2) }}</p><p class="text-xs text-slate-400 mt-1">Pending + overdue</p><a href="{{ route('owner.payments.board') }}" class="group mt-4 inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs font-bold text-amber-500 hover:bg-amber-500/20 hover:border-amber-500/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 transition-colors">View board <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></a></div>
     </div>
 
     <div class="surface-card p-6" data-tour="owner-quick">
@@ -53,6 +62,7 @@
             <a href="{{ route('owner.applications.index') }}" class="btn-muted">Review Applications</a>
             <a href="{{ route('owner.viewings.index') }}" class="btn-muted">Viewing Requests</a>
             <a href="{{ route('owner.contracts.index') }}" class="btn-muted">Manage Contracts</a>
+            <a href="{{ route('owner.payments.board') }}" class="btn-muted">Payment Board</a>
             <a href="{{ route('owner.maintenance.index') }}" class="btn-muted">Maintenance Requests</a>
         </div>
     </div>

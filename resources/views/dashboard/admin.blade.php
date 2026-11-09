@@ -30,7 +30,7 @@
     @endif
 
     {{-- Platform totals --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <a href="{{ route('admin.properties.index') }}" class="block bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-400 transition">
             <p class="text-xs text-slate-500">Properties</p>
             <p class="text-2xl font-bold text-slate-900 mt-1">{{ $totalProperties }}</p>
@@ -50,10 +50,6 @@
                 <p class="text-xs text-slate-400 mt-1">{{ $deletedUsers }} deleted</p>
             @endif
         </a>
-        <div class="bg-white border border-slate-200 rounded-xl p-4">
-            <p class="text-xs text-slate-500">Revenue this month (paid)</p>
-            <p class="text-2xl font-bold text-green-600 mt-1">₱{{ number_format($monthlyRevenue, 2) }}</p>
-        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

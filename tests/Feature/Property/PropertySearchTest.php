@@ -70,6 +70,20 @@ class PropertySearchTest extends TestCase
         $this->assertEquals(1, $property->fresh()->views_count);
     }
 
+    public function test_property_detail_shows_a_google_map_for_its_saved_coordinates(): void
+    {
+        $property = Property::factory()->create([
+            'latitude' => 14.3163392,
+            'longitude' => 120.9139200,
+        ]);
+
+        $this->get("/properties/{$property->slug}")
+            ->assertOk()
+            ->assertSee('Location', false)
+            ->assertSee('maps.google.com/maps?q=14.3163392%2C120.9139200', false)
+            ->assertSee('Open in Google Maps');
+    }
+
     public function test_sorting_by_lowest_price_orders_properties_ascending(): void
     {
         Property::factory()->create(['name' => 'Cheap Place', 'min_monthly_rent' => 3000, 'max_monthly_rent' => 4000]);

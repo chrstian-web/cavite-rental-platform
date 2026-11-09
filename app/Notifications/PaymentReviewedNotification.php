@@ -24,11 +24,12 @@ class PaymentReviewedNotification extends Notification
     {
         $mail = (new MailMessage)->subject('Update on your payment');
         $amount = number_format($this->payment->amount, 2);
-
         return match ($this->payment->status) {
             'paid' => $mail
                 ->line("Your payment of ₱{$amount} has been approved.")
-                ->action('Download receipt', url('/tenant/payments/'.$this->payment->id.'/receipt')),
+                ->action($this->payment->rental_application_id ? 'View application' : 'Download receipt', $this->payment->rental_application_id
+                    ? url('/tenant/applications/'.$this->payment->rental_application_id)
+                    : url('/tenant/payments/'.$this->payment->id.'/receipt')),
             'failed' => $mail
                 ->line("Your payment of ₱{$amount} was rejected.")
                 ->line('Reason: '.$this->payment->review_reason)
@@ -47,6 +48,8 @@ class PaymentReviewedNotification extends Notification
             'type' => 'payment_reviewed',
             'payment_id' => $this->payment->id,
             'status' => $this->payment->status,
+            'application_id' => $this->payment->rental_application_id,
+            'demo_mode' => $this->payment->gateway === 'fake',
         ];
     }
 }

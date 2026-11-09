@@ -130,28 +130,5 @@
             unit looks like, even if they can't visit in person.
         </p>
 
-        @if (isset($space) && $space->images->isNotEmpty())
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                @foreach ($space->images as $image)
-                    <div class="relative group">
-                        <img src="{{ asset('storage/'.$image->path) }}" class="w-full h-20 object-cover rounded-lg
-                            {{ $image->is_cover ? 'ring-2 ring-blue-500' : '' }}">
-                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                            @unless ($image->is_cover)
-                                <form action="{{ route('owner.properties.spaces.images.cover', [$property, $space, $image]) }}" method="POST">
-                                    @csrf @method('PATCH')
-                                    <button class="text-white text-xs underline">Set cover</button>
-                                </form>
-                            @endunless
-                            <form action="{{ route('owner.properties.spaces.images.destroy', [$property, $space, $image]) }}" method="POST"
-                                  onsubmit="return confirm('Remove this photo?')">
-                                @csrf @method('DELETE')
-                                <button class="text-white text-xs underline">Remove</button>
-                            </form>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        @endif
     </div>
 </div>

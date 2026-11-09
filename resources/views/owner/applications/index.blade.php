@@ -46,7 +46,7 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('owner.applications.show', $application) }}" class="text-blue-600 hover:underline">Review</a>
+                                <a href="{{ route('owner.applications.show', $application) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Review</a>
                             </td>
                         </tr>
                     @endforeach

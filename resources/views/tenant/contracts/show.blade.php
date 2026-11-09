@@ -40,7 +40,7 @@
                     <p class="font-medium">Pay your down payment to confirm your move-in</p>
                     <p class="mt-1 text-xs">The unit is handed over only after the owner approves your security deposit and advance payment.</p>
                     @foreach ($toPay as $due)
-                        <a href="{{ route('tenant.payments.show', $due) }}" class="mt-2 block text-blue-700 hover:underline">
+                        <a href="{{ route('tenant.payments.show', $due) }}" class="mt-2 inline-flex min-h-10 items-center justify-center rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
                             Pay {{ $due->typeLabel() }} — ₱{{ number_format($due->amount, 2) }} (due {{ $due->due_date->format('M j, Y') }})
                         </a>
                     @endforeach
@@ -51,21 +51,22 @@
             </div>
         @endif
 
-        <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-3">
-            <a href="{{ route('tenant.contracts.pdf', $contract) }}" class="text-sm text-blue-600 hover:underline">Download PDF</a>
+        <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+            <a href="{{ route('tenant.contracts.pdf', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Download PDF</a>
             @if ($contract->status === 'active')
-                <a href="{{ route('tenant.maintenance.create', $contract) }}" class="text-sm text-blue-600 hover:underline">Submit maintenance request</a>
+                <a href="{{ route('tenant.maintenance.create', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Submit maintenance request</a>
             @endif
             @if (in_array($contract->status, ['expired', 'terminated']) && ! $contract->review)
-                <a href="{{ route('tenant.contracts.review.create', $contract) }}" class="text-sm text-blue-600 hover:underline">Leave a review</a>
+                <a href="{{ route('tenant.contracts.review.create', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Leave a review</a>
             @endif
         </div>
 
-        @if ($contract->payments->isNotEmpty())
+        @php($paymentHistory = $contract->paymentHistory())
+        @if ($paymentHistory->isNotEmpty())
             <div class="mt-4 pt-4 border-t border-slate-100">
                 <p class="text-sm font-medium text-slate-700 mb-2">Payment history</p>
                 <ul class="text-sm space-y-1">
-                    @foreach ($contract->payments as $payment)
+                    @foreach ($paymentHistory as $payment)
                         <li class="flex items-center justify-between">
                             <a href="{{ route('tenant.payments.show', $payment) }}" class="hover:underline">
                                 {{ $payment->typeLabel() }} — ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j, Y') }}

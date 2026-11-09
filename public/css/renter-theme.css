@@ -428,3 +428,21 @@ main input, main select, main textarea { max-width: 100%; }
 .pa-note { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: #fff7ed; color: #9a3412; font-size: .78rem; line-height: 1.35; overflow-wrap: anywhere; }
 body.renter-dark .pa-note { background: rgba(210,153,34,.14); color: #e3b341; }
 @media (max-width: 767px) { table.rt-stack td form textarea { flex: 1 1 100%; width: 100%; min-width: 0; } }
+
+
+/* ═════════ Soft tinted buttons (Units, Virtual Tour, Mark all read, Save, Archive…) ═════════
+   Light mode is the default: dark text on a pale tint. Dark mode keeps the glassy look.
+   Use: class="rt-soft rt-soft-blue" (or -violet / -emerald / -red / -slate). */
+.rt-soft { --soft-bd: #bfdbfe; --soft-bg: #eff6ff; --soft-fg: #1d4ed8; --soft-bd-h: #93c5fd; --soft-bg-h: #dbeafe;
+    border-color: var(--soft-bd); background-color: var(--soft-bg); color: var(--soft-fg); }
+.rt-soft:hover { border-color: var(--soft-bd-h); background-color: var(--soft-bg-h); }
+.rt-soft-violet  { --soft-bd: #ddd6fe; --soft-bg: #f5f3ff; --soft-fg: #6d28d9; --soft-bd-h: #c4b5fd; --soft-bg-h: #ede9fe; }
+.rt-soft-emerald { --soft-bd: #a7f3d0; --soft-bg: #ecfdf5; --soft-fg: #047857; --soft-bd-h: #6ee7b7; --soft-bg-h: #d1fae5; }
+.rt-soft-red     { --soft-bd: #fecaca; --soft-bg: #fef2f2; --soft-fg: #b91c1c; --soft-bd-h: #fca5a5; --soft-bg-h: #fee2e2; }
+.rt-soft-slate   { --soft-bd: #cbd5e1; --soft-bg: #f1f5f9; --soft-fg: #334155; --soft-bd-h: #94a3b8; --soft-bg-h: #e2e8f0; }
+
+body.renter-dark .rt-soft        { --soft-bd: rgba(59,130,246,.3);  --soft-bg: rgba(59,130,246,.1);  --soft-fg: #dbeafe; --soft-bd-h: rgba(96,165,250,.6);  --soft-bg-h: rgba(59,130,246,.2); }
+body.renter-dark .rt-soft-violet { --soft-bd: rgba(167,139,250,.3); --soft-bg: rgba(139,92,246,.1);  --soft-fg: #ede9fe; --soft-bd-h: rgba(196,181,253,.6); --soft-bg-h: rgba(139,92,246,.2); }
+body.renter-dark .rt-soft-emerald{ --soft-bd: rgba(16,185,129,.3);  --soft-bg: rgba(16,185,129,.1);  --soft-fg: #d1fae5; --soft-bd-h: rgba(52,211,153,.6);  --soft-bg-h: rgba(16,185,129,.2); }
+body.renter-dark .rt-soft-red    { --soft-bd: rgba(239,68,68,.3);   --soft-bg: rgba(239,68,68,.1);   --soft-fg: #fee2e2; --soft-bd-h: rgba(248,113,113,.6); --soft-bg-h: rgba(239,68,68,.2); }
+body.renter-dark .rt-soft-slate  { --soft-bd: rgba(100,116,139,.3); --soft-bg: rgba(100,116,139,.1); --soft-fg: #f1f5f9; --soft-bd-h: rgba(148,163,184,.6); --soft-bg-h: rgba(100,116,139,.2); }

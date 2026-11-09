@@ -43,22 +43,22 @@
                 </div>
             @endif
 
-            <div class="mt-4 pt-4 border-t border-slate-100 flex gap-3">
-                <a href="{{ route('owner.contracts.pdf', $contract) }}" class="text-sm text-blue-600 hover:underline">Download PDF</a>
+            <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                <a href="{{ route('owner.contracts.pdf', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Download PDF</a>
                 @if ($contract->status === 'draft')
                     @if ($downPaymentSettled)
-                        <form method="POST" action="{{ route('owner.contracts.activate', $contract) }}">
+                        <form method="POST" action="{{ route('owner.contracts.activate', $contract) }}" class="inline-flex">
                             @csrf @method('PATCH')
-                            <button class="text-sm text-green-600 hover:underline">Activate contract</button>
+                            <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rt-soft rt-soft-emerald">Activate contract</button>
                         </form>
                     @else
                         <span class="text-sm text-slate-400 cursor-not-allowed" title="Available once the down payment is paid">Activate contract (locked)</span>
                     @endif
                 @elseif ($contract->status === 'active')
-                    <form method="POST" action="{{ route('owner.contracts.terminate', $contract) }}"
+                    <form method="POST" action="{{ route('owner.contracts.terminate', $contract) }}" class="inline-flex"
                           onsubmit="return confirm('Terminate this contract? This frees up the unit.')">
                         @csrf @method('PATCH')
-                        <button class="text-sm text-red-600 hover:underline">Terminate contract</button>
+                        <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400">Terminate contract</button>
                     </form>
                 @endif
             </div>
@@ -67,7 +67,7 @@
         <div class="bg-white border border-slate-200 rounded-xl p-6">
             <div class="flex items-center justify-between mb-3">
                 <p class="text-sm font-medium text-slate-700">Payments</p>
-                <a href="{{ route('owner.payments.index') }}" class="text-xs text-blue-600 hover:underline">Review queue</a>
+                <a href="{{ route('owner.payments.index') }}" class="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Review queue</a>
             </div>
 
             @if ($contract->status === 'active')
@@ -94,11 +94,12 @@
                 </form>
             @endif
 
-            @if ($contract->payments->isEmpty())
+            @php($paymentHistory = $contract->paymentHistory())
+            @if ($paymentHistory->isEmpty())
                 <p class="text-xs text-slate-400">No payments recorded yet.</p>
             @else
                 <ul class="text-xs space-y-2">
-                    @foreach ($contract->payments as $payment)
+                    @foreach ($paymentHistory as $payment)
                         <li class="border-b border-slate-100 pb-2">
                             <div class="flex items-center justify-between">
                                 <a href="{{ route('owner.payments.show', $payment) }}" class="hover:underline">

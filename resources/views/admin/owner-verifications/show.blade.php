@@ -29,8 +29,9 @@
                                     <p class="text-xs text-slate-400">Expires {{ $doc->expiration_date->format('M j, Y') }}</p>
                                 @endif
                             </div>
-                            <button type="button" @click="$dispatch('open-docs', { id: 'owner-docs', index: {{ $loop->index }} })"
-                                    class="shrink-0 text-blue-600 hover:underline text-xs">View</button>
+                            {{-- x-data gives this button its own Alpine scope; it sits outside the viewer's, so @click would otherwise never bind. --}}
+                            <button type="button" x-data @click="$dispatch('open-docs', { id: 'owner-docs', index: {{ $loop->index }} })"
+                                    class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">View</button>
                         </div>
                     @endforeach
                 </div>
@@ -106,7 +107,7 @@
                         <form method="POST" action="{{ route('admin.owner-verifications.purge-files', $verification) }}"
                               onsubmit="return confirm('Permanently delete the uploaded files (including the government ID)? This cannot be undone. The decision record is kept.')">
                             @csrf @method('DELETE')
-                            <button class="w-full border border-red-300 text-red-600 hover:bg-red-50 text-sm font-medium rounded-lg py-2">Delete uploaded files</button>
+                            <x-delete-button label="Delete uploaded files" size="block" />
                             <p class="text-xs text-slate-400 mt-1">Recommended for declined applications once you no longer need the documents.</p>
                         </form>
                     @endif

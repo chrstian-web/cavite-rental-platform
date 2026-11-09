@@ -11,6 +11,8 @@
     <style>[x-cloak] { display: none !important; }</style>
     @stack('head')
     @include('partials.form-fields')
+    @include('partials.delete-button-assets')
+    @include('partials.button-effects')
     @if (auth()->check())
         @include('partials.theme-head')
     @endif
@@ -33,6 +35,7 @@
                             ['route' => 'owner.applications.index', 'label' => 'Applications', 'notifyTypes' => 'new_rental_application'],
                             ['route' => 'owner.viewings.index', 'label' => 'Viewing Requests', 'notifyTypes' => 'new_viewing_request'],
                             ['route' => 'owner.contracts.index', 'label' => 'Contracts'],
+                            ['route' => 'owner.payments.board', 'label' => 'Payments'],
                             ['route' => 'owner.maintenance.index', 'label' => 'Maintenance', 'notifyTypes' => 'new_maintenance_request'],
                         ]])
                     @endif
@@ -83,6 +86,7 @@
                 <a href="{{ route('owner.applications.index') }}" class="block text-sm text-slate-600 py-1">Applications</a>
                 <a href="{{ route('owner.viewings.index') }}" class="block text-sm text-slate-600 py-1">Viewing Requests</a>
                 <a href="{{ route('owner.contracts.index') }}" class="block text-sm text-slate-600 py-1">Contracts</a>
+                <a href="{{ route('owner.payments.board') }}" class="block text-sm text-slate-600 py-1">Payments</a>
                 <a href="{{ route('owner.maintenance.index') }}" class="block text-sm text-slate-600 py-1">Maintenance</a>
             @endif
             @if (auth()->user()->isTenant())

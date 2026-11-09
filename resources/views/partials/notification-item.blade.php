@@ -12,6 +12,10 @@
             "Your application for {$data['property_name']} is now ".str($data['status'])->replace('_', ' '),
             route('tenant.applications.show', $data['application_id']),
         ],
+        'reservation_fee_offered' => [
+            "The owner sent a reservation fee of ₱".number_format((float) ($data['reservation_fee'] ?? 0), 2)." and terms for {$data['property_name']}",
+            route('tenant.applications.show', $data['application_id']),
+        ],
         'new_viewing_request' => [
             "New viewing request for {$data['property_name']}",
             route('owner.viewings.index'),
@@ -56,8 +60,12 @@
             route('owner.verification.show'),
         ],
         'online_payment_received' => [
-            ($data['tenant_name'] ?? 'A tenant').' paid ₱'.number_format($data['amount'] ?? 0, 2).' online'.(! empty($data['property_name']) ? " ({$data['property_name']})" : ''),
-            route('owner.payments.show', $data['payment_id']),
+            ! empty($data['demo_mode'])
+                ? 'Payment recorded'.(! empty($data['property_name']) ? " ({$data['property_name']})" : '')
+                : ($data['tenant_name'] ?? 'A tenant').' paid ₱'.number_format($data['amount'] ?? 0, 2).' online'.(! empty($data['property_name']) ? " ({$data['property_name']})" : ''),
+            ! empty($data['application_id'])
+                ? route('owner.applications.show', $data['application_id'])
+                : route('owner.payments.show', $data['payment_id']),
         ],
         'payment_submitted' => [
             ($data['tenant_name'] ?? 'A tenant').' submitted ₱'.number_format((float) ($data['amount'] ?? 0), 2).' for review'.(! empty($data['property_name']) ? " ({$data['property_name']})" : ''),
@@ -68,8 +76,10 @@
             route('owner.payments.show', $data['payment_id']),
         ],
         'payment_reviewed' => [
-            'Your payment was '.str($data['status'] ?? 'updated')->replace('_', ' '),
-            route('tenant.payments.show', $data['payment_id']),
+            ! empty($data['demo_mode']) ? 'Your payment was recorded' : 'Your payment was '.str($data['status'] ?? 'updated')->replace('_', ' '),
+            ! empty($data['application_id'])
+                ? route('tenant.applications.show', $data['application_id'])
+                : route('tenant.payments.show', $data['payment_id']),
         ],
         'down_payment_requested' => [
             "Down payment requested for {$data['property_name']}",

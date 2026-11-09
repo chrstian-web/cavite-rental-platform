@@ -1,22 +1,30 @@
 @extends('layouts.app')
 
-@section('title', 'Test checkout')
+@section('title', 'Checkout')
 
 @section('content')
     <div class="max-w-md mx-auto mt-8 bg-white border border-slate-200 rounded-xl p-6">
-        <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-            Test checkout — no real money is charged
-        </p>
-
         <h1 class="text-lg font-semibold text-slate-900">{{ $payment->typeLabel() }}</h1>
-        <p class="text-sm text-slate-500">{{ $payment->contract->property->name }}</p>
+        <p class="text-sm text-slate-500">{{ $payment->application?->property?->name ?? $payment->contract?->property?->name }}</p>
 
         <p class="text-3xl font-semibold text-slate-900 my-6">₱{{ number_format($payment->amount, 2) }}</p>
 
-        <form method="POST" action="{{ route('fake-checkout.pay', $checkout) }}" class="space-y-2">
+        <form method="POST" action="{{ route('fake-checkout.pay', $checkout) }}" class="space-y-3">
             @csrf
+            <fieldset>
+                <legend class="mb-2 text-sm font-medium text-slate-700">Choose a payment method</legend>
+                <label class="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+                    <input type="radio" name="payment_method" value="gcash" required @checked(old('payment_method', 'gcash') === 'gcash')>
+                    <span>GCash</span>
+                </label>
+                <label class="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+                    <input type="radio" name="payment_method" value="bank_transfer" required @checked(old('payment_method') === 'bank_transfer')>
+                    <span>Bank transfer</span>
+                </label>
+                @error('payment_method') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </fieldset>
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 text-sm font-medium">
-                Pay ₱{{ number_format($payment->amount, 2) }} (simulate GCash)
+                Complete payment
             </button>
         </form>
 

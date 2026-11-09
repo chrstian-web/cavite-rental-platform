@@ -5,6 +5,15 @@
 @section('content')
     <h1 class="text-xl font-semibold text-slate-900 mb-6">Rental Contracts</h1>
 
+    <form method="GET" class="mb-4">
+        <select name="status" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm">
+            <option value="">All statuses</option>
+            @foreach (['draft', 'active', 'terminated', 'expired'] as $status)
+                <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->title() }}</option>
+            @endforeach
+        </select>
+    </form>
+
     @if ($contracts->isEmpty())
         <div class="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500">
             No contracts yet — create one from an approved application.
@@ -39,7 +48,7 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('owner.contracts.show', $contract) }}" class="text-blue-600 hover:underline">Manage</a>
+                                <a href="{{ route('owner.contracts.show', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Manage</a>
                             </td>
                         </tr>
                     @endforeach

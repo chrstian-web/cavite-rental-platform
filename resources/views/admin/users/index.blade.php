@@ -8,7 +8,7 @@
             <h1 class="text-xl font-semibold text-slate-900">Manage users</h1>
             <p class="text-sm text-slate-500 mt-1">Reset a user’s password or remove accounts that are no longer members.</p>
         </div>
-        <a href="{{ route('admin.users.deleted') }}" class="text-sm text-slate-600 hover:underline">Deleted users &rarr;</a>
+        <a href="{{ route('admin.users.deleted') }}" class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft rt-soft-slate">Deleted users &rarr;</a>
     </div>
 
     <form method="GET" class="mb-4 flex gap-2">
@@ -42,18 +42,20 @@
                                     {{ str($user->status)->title() }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <a href="{{ route('admin.users.password.edit', $user) }}" class="text-blue-600 hover:underline">
+                            <td class="px-4 py-3">
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                <a href="{{ route('admin.users.password.edit', $user) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">
                                     Reset password
                                 </a>
                                 @if (! $user->isSuperAdmin() && ! $user->is(auth()->user()))
-                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline ml-4"
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline-flex"
                                           onsubmit="return confirm('Delete {{ addslashes($user->first_name.' '.$user->last_name) }}? They will no longer be able to log in. Their contracts and payment history are kept.')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:underline">Delete</button>
+                                        <x-delete-button label="Delete" />
                                     </form>
                                 @endif
+                                </div>
                             </td>
                         </tr>
                     @empty

@@ -63,7 +63,7 @@ class RentalApplicationController extends Controller
     {
         $this->authorize('view', $application);
 
-        $application->load(['property', 'rentalSpace', 'documents']);
+        $application->load(['property', 'rentalSpace', 'documents', 'reservationFeePayment']);
 
         return view('tenant.applications.show', compact('application'));
     }

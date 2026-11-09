@@ -1,4 +1,7 @@
 {{-- Shared create/edit form. $property is null on create. --}}
+
+<section aria-labelledby="property-details-heading">
+<h2 id="property-details-heading" class="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Property details</h2>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">Property name</label>
@@ -21,26 +24,36 @@
     <textarea name="description" rows="4"
         class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">{{ old('description', $property->description ?? '') }}</textarea>
 </div>
+</section>
 
+<section class="mt-5" aria-labelledby="property-address-heading">
+<h2 id="property-address-heading" class="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Location</h2>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
     <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">City / Municipality</label>
         <select name="location_id" required class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
             <option value="">Select location</option>
             @foreach ($locations as $location)
-                <option value="{{ $location->id }}" @selected((string) old('location_id', $property->location_id ?? '') === (string) $location->id)>
+                <option value="{{ $location->id }}"
+                    @selected((string) old('location_id', $property->location_id ?? '') === (string) $location->id)>
                     {{ $location->city_municipality }}
                 </option>
             @endforeach
         </select>
     </div>
     <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">Street address</label>
-        <input type="text" name="address_line" value="{{ old('address_line', $property->address_line ?? '') }}" required
+        <label for="address_line" class="block text-sm font-medium text-slate-700 mb-1">Street address</label>
+        <input id="address_line" type="text" name="address_line" value="{{ old('address_line', $property->address_line ?? '') }}" required autocomplete="street-address" placeholder="e.g. 123 Rizal Street, Brgy. San Agustin"
             class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
+        <p class="mt-1 text-xs text-slate-500">Include the street, barangay, or a nearby landmark.</p>
     </div>
 </div>
+    <input type="hidden" name="latitude" value="{{ old('latitude', $property->latitude ?? '') }}">
+    <input type="hidden" name="longitude" value="{{ old('longitude', $property->longitude ?? '') }}">
+</section>
 
+<section class="mt-5" aria-labelledby="monthly-rent-heading">
+<h2 id="monthly-rent-heading" class="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Monthly rent</h2>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
     <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">Min. monthly rent (₱)</label>
@@ -53,7 +66,10 @@
             class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
     </div>
 </div>
+</section>
 
+<section class="mt-5" aria-labelledby="contact-information-heading">
+<h2 id="contact-information-heading" class="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Contact information</h2>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
     <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">Contact person</label>
@@ -73,9 +89,11 @@
             class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
     </div>
 </div>
+</section>
 
 @if (isset($property))
-    <div class="mt-4">
+    <section class="mt-5" aria-labelledby="listing-status-heading">
+        <h2 id="listing-status-heading" class="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Listing status</h2>
         <label class="block text-sm font-medium text-slate-700 mb-1">Availability status</label>
         <select name="availability_status" class="w-full md:w-64 rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
             @foreach (['available', 'fully_booked', 'unavailable', 'under_review'] as $status)
@@ -84,11 +102,11 @@
                 </option>
             @endforeach
         </select>
-    </div>
+    </section>
 @endif
 
-<div class="mt-4">
-    <label class="block text-sm font-medium text-slate-700 mb-2">Amenities</label>
+<section class="mt-5" aria-labelledby="amenities-heading">
+    <h2 id="amenities-heading" class="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Amenities</h2>
     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
         @php $selectedAmenities = old('amenities', isset($property) ? $property->amenities->pluck('id')->all() : []); @endphp
         @foreach ($amenities as $amenity)
@@ -99,34 +117,77 @@
             </label>
         @endforeach
     </div>
-</div>
+</section>
 
-<div class="mt-4">
-    <label class="block text-sm font-medium text-slate-700 mb-1">Photos</label>
-    <input type="file" name="images[]" multiple accept="image/*" class="w-full text-sm">
-    <p class="text-xs text-slate-400 mt-1">Up to 10 images, 5MB each. First upload becomes the cover photo automatically.</p>
+<section class="mt-5" aria-labelledby="property-photos-heading">
+    <h2 id="property-photos-heading" class="mb-3 border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Photos</h2>
+    <input id="property-image-input" type="file" name="images[]" multiple accept="image/*"
+           data-has-cover="{{ isset($property) && $property->images->contains('is_cover', true) ? 'true' : 'false' }}"
+           class="w-full text-sm">
+    <p class="mt-1 text-xs text-slate-500">Up to 10 images per upload, 5MB each. The first upload becomes the cover if the property does not already have one.</p>
+    <div id="property-image-previews" class="mt-3 hidden grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Selected photo previews"></div>
+    <p id="property-image-status" class="mt-2 text-xs text-slate-500" role="status" aria-live="polite">Choose photos to preview them before saving.</p>
+</section>
 
-    @if (isset($property) && $property->images->isNotEmpty())
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-            @foreach ($property->images as $image)
-                <div class="relative group">
-                    <img src="{{ asset('storage/'.$image->path) }}" class="w-full h-20 object-cover rounded-lg
-                        {{ $image->is_cover ? 'ring-2 ring-blue-500' : '' }}">
-                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                        @unless ($image->is_cover)
-                            <form action="{{ route('owner.properties.images.cover', [$property, $image]) }}" method="POST">
-                                @csrf @method('PATCH')
-                                <button class="text-white text-xs underline">Set cover</button>
-                            </form>
-                        @endunless
-                        <form action="{{ route('owner.properties.images.destroy', [$property, $image]) }}" method="POST"
-                              onsubmit="return confirm('Remove this image?')">
-                            @csrf @method('DELETE')
-                            <button class="text-white text-xs underline">Remove</button>
-                        </form>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    @endif
-</div>
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const input = document.getElementById('property-image-input');
+            const preview = document.getElementById('property-image-previews');
+            const status = document.getElementById('property-image-status');
+            if (!input || !preview || !status) return;
+
+            const hasCover = input.dataset.hasCover === 'true';
+            let previewUrls = [];
+
+            input.addEventListener('change', function () {
+                previewUrls.forEach((url) => URL.revokeObjectURL(url));
+                previewUrls = [];
+                preview.replaceChildren();
+
+                const files = Array.from(input.files || []);
+                if (!files.length) {
+                    preview.classList.add('hidden');
+                    preview.classList.remove('grid');
+                    status.textContent = 'Choose photos to preview them before saving.';
+                    return;
+                }
+
+                preview.classList.remove('hidden');
+                preview.classList.add('grid');
+
+                files.forEach(function (file, index) {
+                    if (!file.type.startsWith('image/')) return;
+
+                    const card = document.createElement('figure');
+                    card.className = 'overflow-hidden rounded-lg border border-slate-200 bg-white';
+
+                    const image = document.createElement('img');
+                    const url = URL.createObjectURL(file);
+                    previewUrls.push(url);
+                    image.src = url;
+                    image.alt = 'Preview of ' + file.name;
+                    image.className = 'h-24 w-full object-cover';
+
+                    const caption = document.createElement('figcaption');
+                    caption.className = 'px-2 py-1.5 text-xs font-medium text-slate-700';
+                    caption.textContent = !hasCover && index === 0 ? 'Will be the cover' : 'New photo';
+
+                    card.append(image, caption);
+                    preview.appendChild(card);
+                });
+
+                let message = files.length + (files.length === 1 ? ' photo selected.' : ' photos selected.');
+                message += hasCover
+                    ? ' The current cover photo will stay unchanged.'
+                    : ' The first selected photo will be the cover.';
+                if (files.length > 10) message += ' The maximum is 10 photos per upload.';
+                status.textContent = message;
+            });
+
+            window.addEventListener('pagehide', function () {
+                previewUrls.forEach((url) => URL.revokeObjectURL(url));
+            }, { once: true });
+        });
+    </script>
+@endpush

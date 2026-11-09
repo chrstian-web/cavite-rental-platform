@@ -29,6 +29,7 @@ class PaymentController extends Controller
         $all = Payment::query()
             ->with(['contract.property'])
             ->where('user_id', $request->user()->id)
+            ->whereNull('rental_application_id')
             ->orderBy('due_date')
             ->get();
 
@@ -41,9 +42,13 @@ class PaymentController extends Controller
         return view('tenant.payments.index', compact('dueSoon', 'pendingReview', 'paid', 'overdue', 'failed'));
     }
 
-    public function show(Payment $payment): View
+    public function show(Payment $payment): View|RedirectResponse
     {
         $this->authorize('view', $payment);
+
+        if ($payment->rental_application_id) {
+            return redirect()->route('tenant.applications.show', $payment->rental_application_id);
+        }
 
         $payment->load(['contract.property', 'reviewer', 'statusHistories.actor']);
 
@@ -85,7 +90,7 @@ class PaymentController extends Controller
 
         abort_unless($payment->status === 'paid', 404, 'A receipt is only available for an approved payment.');
 
-        $payment->load(['contract.property', 'contract.tenant', 'reviewer']);
+        $payment->load(['contract.property', 'contract.tenant', 'application.property', 'tenant', 'reviewer']);
 
         $pdf = Pdf::loadView('pdf.payment-receipt', ['payment' => $payment]);
 

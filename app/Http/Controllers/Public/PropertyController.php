@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\SearchLog;
 use App\Models\VirtualTour;
 use App\Models\VirtualTourScene;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -39,6 +40,17 @@ class PropertyController extends Controller
         $locations = $this->activeLocations();
 
         return view('properties.index', compact('properties', 'locations', 'sort'));
+    }
+
+    /**
+     * Live result count for the landing-page search. Same filters as index(),
+     * but it is not logged as a search: it fires while the visitor is still choosing.
+     */
+    public function count(Request $request): JsonResponse
+    {
+        $count = $this->applyPropertyFilters($this->baseVerifiedAvailableQuery(), $request)->count();
+
+        return response()->json(['count' => $count]);
     }
 
     /**

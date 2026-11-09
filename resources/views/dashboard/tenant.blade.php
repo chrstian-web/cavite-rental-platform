@@ -35,7 +35,7 @@
     @if ($activeContract->property)
         <p class="text-lg text-slate-950 font-extrabold">{{ $activeContract->property->name }} <span class="text-slate-400 font-normal">— {{ $activeContract->rentalSpace->space_number }}</span></p>
         <p class="text-sm text-slate-500 mt-1">₱{{ number_format($activeContract->monthly_rent) }}/month · until {{ $activeContract->end_date->format('M j, Y') }}</p>
-        <a href="{{ route('tenant.contracts.show', $activeContract) }}" class="text-sm text-rose-600 hover:underline font-bold mt-3 inline-block">View contract →</a>
+        <a href="{{ route('tenant.contracts.show', $activeContract) }}" class="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">View contract <span aria-hidden="true">→</span></a>
     @else
         <p class="text-sm text-slate-400">Property details unavailable.</p>
     @endif
@@ -64,7 +64,7 @@
                     <p class="eyebrow mb-2">Upcoming payment</p>
                     <p class="text-2xl font-extrabold text-slate-950">₱{{ number_format($upcomingPayment->amount, 2) }}</p>
                     <p class="text-xs text-slate-400 mt-1">{{ $upcomingPayment->typeLabel() }} · Due {{ $upcomingPayment->due_date->format('M j, Y') }}</p>
-                    <a href="{{ route('tenant.payments.show', $upcomingPayment) }}" class="inline-block mt-3 text-sm font-bold text-rose-600 hover:underline">Pay now →</a>
+                    <a href="{{ route('tenant.payments.show', $upcomingPayment) }}" class="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">Pay now <span aria-hidden="true">→</span></a>
                 </div>
             @endif
 

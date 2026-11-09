@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class RentalContract extends Model
 {
@@ -54,6 +55,25 @@ class RentalContract extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Every payment the tenant has made for this tenancy, oldest first.
+     *
+     * The reservation fee is paid before the contract exists, so it is linked to
+     * the rental application instead of the contract and is not part of
+     * $this->payments. This prepends it so both tenant and owner see the full
+     * history. Display only: do not use this for down-payment/activation checks.
+     */
+    public function paymentHistory(): Collection
+    {
+        $reservation = $this->application?->reservationFeePayment;
+
+        // Build a fresh collection: prepend() mutates in place, which would leak the
+        // reservation fee into the loaded $this->payments relation.
+        return collect($reservation ? [$reservation] : [])
+            ->concat($this->payments)
+            ->values();
     }
 
     /**

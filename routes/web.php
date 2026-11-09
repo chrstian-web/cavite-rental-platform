@@ -33,6 +33,7 @@ use App\Http\Controllers\Tenant\MaintenanceRequestController as TenantMaintenanc
 use App\Http\Controllers\Tenant\OnlinePaymentController as TenantOnlinePaymentController;
 use App\Http\Controllers\Tenant\PaymentController as TenantPaymentController;
 use App\Http\Controllers\Tenant\RecommendationController;
+use App\Http\Controllers\Tenant\ReservationFeeController;
 use App\Http\Controllers\Tenant\RentalApplicationController as TenantRentalApplicationController;
 use App\Http\Controllers\Tenant\RentalContractController as TenantRentalContractController;
 use App\Http\Controllers\Tenant\ReviewController as TenantReviewController;
@@ -47,6 +48,8 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/properties', [PublicPropertyController::class, 'index'])->name('properties.index');
+// Must stay above the {slug} route, or "count" would be read as a property slug.
+Route::get('/properties/count', [PublicPropertyController::class, 'count'])->middleware('throttle:60,1')->name('properties.count');
 Route::get('/properties/{slug}', [PublicPropertyController::class, 'show'])->name('properties.show');
 Route::get('/properties/{property}/virtual-tour/{tour}/scenes/{scene}/panorama', [PublicPropertyController::class, 'panorama'])
     ->name('virtual-tour.panorama');
@@ -59,6 +62,7 @@ Route::middleware('auth')->group(function () {
     // First-time user guidance (welcome popup, guided tour, getting-started checklist)
     Route::post('/onboarding/welcome', [OnboardingController::class, 'welcome'])->name('onboarding.welcome');
     Route::post('/onboarding/tour-completed', [OnboardingController::class, 'tourCompleted'])->name('onboarding.tour-completed');
+    Route::post('/onboarding/checklist/seen', [OnboardingController::class, 'stepSeen'])->name('onboarding.checklist.seen');
     Route::post('/onboarding/checklist/dismiss', [OnboardingController::class, 'dismissChecklist'])->name('onboarding.checklist.dismiss');
     Route::post('/onboarding/restart', [OnboardingController::class, 'restart'])->name('onboarding.restart');
 
@@ -78,6 +82,8 @@ Route::middleware('auth')->group(function () {
 
     // Owner / Manager property management
     Route::middleware(['role:owner,manager,super_admin', 'owner.verified'])->prefix('owner')->name('owner.')->group(function () {
+        Route::post('map/search', \App\Http\Controllers\Owner\PropertyMapSearchController::class)
+            ->middleware('throttle:10,1')->name('properties.map-search');
         Route::resource('properties', OwnerPropertyController::class)->except(['show']);
 
         Route::delete('properties/{property}/images/{image}', [PropertyImageController::class, 'destroy'])
@@ -129,6 +135,7 @@ Route::middleware('auth')->group(function () {
 
         // Payment review queue (tenant-submitted payments)
         Route::get('payments', [OwnerPaymentController::class, 'index'])->name('payments.index');
+        Route::get('payments/board', [OwnerPaymentController::class, 'board'])->name('payments.board');
         Route::get('payments/{payment}', [OwnerPaymentController::class, 'show'])->name('payments.show');
         Route::patch('payments/{payment}/review', [OwnerPaymentController::class, 'review'])->name('payments.review');
         Route::patch('payments/{payment}/received', [OwnerPaymentController::class, 'markReceived'])->name('payments.received');
@@ -143,6 +150,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:tenant')->prefix('tenant')->name('tenant.')->group(function () {
         Route::get('applications', [TenantRentalApplicationController::class, 'index'])->name('applications.index');
         Route::get('applications/{application}', [TenantRentalApplicationController::class, 'show'])->name('applications.show');
+        Route::post('applications/{application}/reservation-fee', [ReservationFeeController::class, 'pay'])->name('applications.reservation-fee.pay');
         Route::get('rental-spaces/{space}/apply', [TenantRentalApplicationController::class, 'create'])->name('applications.create');
         Route::post('rental-spaces/{space}/apply', [TenantRentalApplicationController::class, 'store'])->name('applications.store');
 
@@ -178,12 +186,13 @@ Route::middleware('auth')->group(function () {
     });
 
     // Private document download — authorized per-request, never a public URL
-    // Built-in test checkout page used when PAYMENT_GATEWAY=fake (local/testing only; no real money).
+    // Local demo checkout used when PAYMENT_GATEWAY=fake (local/testing only; no real money).
     Route::get('fake-payments/{checkout}', [FakeCheckoutController::class, 'show'])->name('fake-checkout.show');
     Route::post('fake-payments/{checkout}/pay', [FakeCheckoutController::class, 'pay'])->name('fake-checkout.pay');
     Route::post('fake-payments/{checkout}/cancel', [FakeCheckoutController::class, 'cancel'])->name('fake-checkout.cancel');
 
     Route::get('payments/{payment}/proof', [PaymentDocumentController::class, 'download'])->name('payments.proof.download');
+    Route::get('payments/{payment}/proof/view', [PaymentDocumentController::class, 'show'])->name('payments.proof.view');
     Route::get('documents/{document}/download', [ApplicationDocumentController::class, 'download'])->name('documents.download');
     Route::get('documents/{document}/view', [ApplicationDocumentController::class, 'show'])->name('documents.view');
     Route::get('documents/verification/{document}/download', [VerificationDocumentController::class, 'download'])->name('verification-documents.download');

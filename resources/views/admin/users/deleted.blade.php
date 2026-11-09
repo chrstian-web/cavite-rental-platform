@@ -8,7 +8,7 @@
             <h1 class="text-xl font-semibold text-slate-900">Deleted users</h1>
             <p class="text-sm text-slate-500 mt-1">Restore an account that was deleted by mistake. Their contracts and history are still intact.</p>
         </div>
-        <a href="{{ route('admin.users.index') }}" class="text-sm text-slate-600 hover:underline">&larr; Back to users</a>
+        <a href="{{ route('admin.users.index') }}" class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft rt-soft-slate">&larr; Back to users</a>
     </div>
 
     <form method="GET" class="mb-4 flex gap-2">
@@ -39,11 +39,11 @@
                             <td class="px-4 py-3 text-slate-600">{{ str($user->role?->name ?? 'Unknown')->title() }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $user->deleted_at->diffForHumans() }}</td>
                             <td class="px-4 py-3 text-right">
-                                <form method="POST" action="{{ route('admin.users.restore', $user) }}"
+                                <form method="POST" action="{{ route('admin.users.restore', $user) }}" class="inline-flex"
                                       onsubmit="return confirm('Restore {{ addslashes($user->first_name.' '.$user->last_name) }}? They will be able to log in again.')">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="text-green-600 hover:underline">Restore</button>
+                                    <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rt-soft rt-soft-emerald">Restore</button>
                                 </form>
                             </td>
                         </tr>

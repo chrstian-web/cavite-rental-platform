@@ -17,9 +17,14 @@ class PaymentPolicy
             return $payment->user_id === $user->id;
         }
 
+        $property = $payment->application?->property ?? $payment->contract?->property;
+        if (! $property) {
+            return false;
+        }
+
         return $user->isOwner()
-            ? $payment->contract->owner_id === $user->id
-            : $payment->contract->property->managers()->where('users.id', $user->id)->exists();
+            ? $property->owner_id === $user->id
+            : ($user->isManager() && $property->managers()->where('users.id', $user->id)->exists());
     }
 
     /**
@@ -29,6 +34,7 @@ class PaymentPolicy
     {
         return $user->isTenant()
             && $payment->user_id === $user->id
+            && $payment->rental_application_id === null
             && $payment->canBeSubmittedByTenant();
     }
 
@@ -40,6 +46,7 @@ class PaymentPolicy
     {
         return $user->isTenant()
             && $payment->user_id === $user->id
+            && $payment->rental_application_id === null
             && $payment->isOnline()
             && $payment->status === 'paid';
     }
@@ -49,7 +56,7 @@ class PaymentPolicy
      */
     public function markReceived(User $user, Payment $payment): bool
     {
-        if ($user->isTenant() || ! in_array($payment->status, ['pending', 'overdue'], true)) {
+        if ($user->isTenant() || $payment->rental_application_id !== null || ! in_array($payment->status, ['pending', 'overdue'], true)) {
             return false;
         }
 
@@ -69,8 +76,10 @@ class PaymentPolicy
             return true;
         }
 
-        return $user->isOwner()
-            ? $payment->contract->owner_id === $user->id
-            : ($user->isManager() && $payment->contract->property->managers()->where('users.id', $user->id)->exists());
+        $property = $payment->application?->property ?? $payment->contract?->property;
+
+        return $property && ($user->isOwner()
+            ? $property->owner_id === $user->id
+            : ($user->isManager() && $property->managers()->where('users.id', $user->id)->exists()));
     }
 }

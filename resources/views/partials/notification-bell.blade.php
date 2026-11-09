@@ -22,7 +22,7 @@
                 <form method="POST" action="{{ route('notifications.readAll') }}">
                     @csrf
                     @method('PATCH')
-                    <button class="text-xs text-blue-600 hover:underline">Mark all read</button>
+                    <button type="submit" class="inline-flex min-h-9 items-center justify-center rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Mark all read</button>
                 </form>
             @endif
         </div>
@@ -35,7 +35,7 @@
             @endforelse
         </div>
 
-        <a href="{{ route('notifications.index') }}" class="block text-center text-xs text-blue-600 hover:underline px-4 py-3 border-t border-slate-100">
+        <a href="{{ route('notifications.index') }}" class="block rounded-b-xl border-t border-slate-100 px-4 py-3 text-center text-xs font-semibold text-blue-600 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
             View all notifications
         </a>
     </div>

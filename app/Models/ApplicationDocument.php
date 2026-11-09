@@ -14,7 +14,7 @@ class ApplicationDocument extends Model
 
     /** Document types requested on the application form, per employment status. */
     public const LABELS = [
-        'valid_id_1' => 'Valid ID (1 of 2)',
+        'valid_id_1' => 'Identification document',
         'valid_id_2' => 'Valid ID (2 of 2)',
         'student_id' => 'Student ID',
         'parent_id_1' => "Parent/guardian's valid ID (1 of 2)",
@@ -29,6 +29,13 @@ class ApplicationDocument extends Model
 
     public function getLabelAttribute(): string
     {
+        if (
+            $this->document_type === 'proof_of_income'
+            && $this->rentalApplication?->employment_status === 'student'
+        ) {
+            return 'Proof of income of parents/guardian';
+        }
+
         return self::LABELS[$this->document_type]
             ?? str($this->document_type)->replace('_', ' ')->title()->toString();
     }

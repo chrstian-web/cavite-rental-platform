@@ -15,6 +15,7 @@ class PaymentController extends ApiController
         $payments = Payment::query()
             ->with('contract.property')
             ->where('user_id', $request->user()->id)
+            ->whereNull('rental_application_id')
             ->latest('due_date')
             ->paginate($request->integer('per_page', 15));
 

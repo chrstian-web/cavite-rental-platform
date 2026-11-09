@@ -16,7 +16,7 @@
                 <dl class="grid grid-cols-2 gap-y-2 text-sm">
                     <dt class="text-slate-500">Payment type</dt><dd class="text-slate-900">{{ $payment->typeLabel() }}</dd>
                     @if ($payment->isOnline())
-                        <dt class="text-slate-500">Paid via</dt><dd class="text-slate-900">Online ({{ ucfirst((string) $payment->gateway) }}){{ $payment->receipt_number ? ' · '.$payment->receipt_number : '' }}</dd>
+                        <dt class="text-slate-500">Paid via</dt><dd class="text-slate-900">{{ $payment->gateway === 'fake' ? ucfirst(str_replace('_', ' ', (string) $payment->payment_method ?: 'Online')) : 'Online ('.ucfirst((string) $payment->gateway).')' }}{{ $payment->receipt_number ? ' · '.$payment->receipt_number : '' }}</dd>
                     @endif
                     <dt class="text-slate-500">Amount due</dt><dd class="text-slate-900 font-medium">₱{{ number_format($payment->amount, 2) }}</dd>
                     <dt class="text-slate-500">Due date</dt><dd class="text-slate-900">{{ $payment->due_date->format('M j, Y') }}</dd>
@@ -31,18 +31,22 @@
                     @endif
                 </dl>
 
-                @if ($payment->proof_path)
-                    <div class="mt-4 pt-4 border-t border-slate-100">
-                        <a href="{{ route('payments.proof.download', $payment) }}" class="text-sm text-blue-600 hover:underline">
-                            View submitted proof of payment
-                        </a>
+                @php($proofItems = \App\Support\DocumentViewerItems::fromPayment($payment))
+                @if ($proofItems !== [] || $payment->status === 'paid')
+                    <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                        @if ($proofItems !== [])
+                            {{-- Opens the in-page viewer. Without JavaScript it still works as a normal link (new tab). --}}
+                            <a href="{{ route('payments.proof.view', $payment) }}" target="_blank" rel="noopener"
+                               x-data @click.prevent="$dispatch('open-docs', { id: 'payment-proof', index: 0 })"
+                               class="inline-flex min-h-[44px] items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">View submitted proof of payment</a>
+                        @endif
+                        @if ($payment->status === 'paid')
+                            <a href="{{ route('tenant.payments.receipt', $payment) }}" class="inline-flex min-h-[44px] items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Download receipt (PDF)</a>
+                        @endif
                     </div>
-                @endif
-
-                @if ($payment->status === 'paid')
-                    <div class="mt-4 pt-4 border-t border-slate-100">
-                        <a href="{{ route('tenant.payments.receipt', $payment) }}" class="text-sm text-blue-600 hover:underline">Download receipt (PDF)</a>
-                    </div>
+                    @if ($proofItems !== [])
+                        @include('partials.document-viewer', ['items' => $proofItems, 'id' => 'payment-proof', 'title' => 'Proof of payment', 'trigger' => false])
+                    @endif
                 @endif
             </div>
 
@@ -106,18 +110,18 @@
             @if ($payment->canBeSubmittedByTenant())
                 <div class="bg-white border border-slate-200 rounded-xl p-6">
                     <h2 class="text-sm font-semibold text-slate-700 mb-1">Pay online</h2>
-                    <p class="text-xs text-slate-500 mb-4">
-                        Pay instantly with GCash, card or QR Ph. It is confirmed automatically. After paying you'll come back to this page to add your reference number and a screenshot of your payment.
-                        @if (config('services.payment_gateway', 'fake') !== 'paymongo')
-                            <span class="font-medium text-amber-700">(Test mode: no real money is charged.)</span>
+                    @include('partials.paymongo-payment-methods')
+                    @if ((config('services.payment_gateway') === 'fake' && app()->environment(['local', 'testing'])) || (config('services.payment_gateway') === 'paymongo' && filled(config('services.paymongo.secret_key')) && filled(config('services.paymongo.webhook_secret')) && count(config('services.paymongo.payment_methods', [])) > 0))
+                        @if (config('services.payment_gateway') === 'paymongo')
+                            <p class="text-xs text-slate-500 mb-4">The provider confirms the payment. After checkout, return here to add your reference number and screenshot.</p>
                         @endif
-                    </p>
-                    <form method="POST" action="{{ route('tenant.payments.pay-online', $payment) }}">
-                        @csrf
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 text-sm font-medium">
-                            Pay ₱{{ number_format($payment->amount, 2) }} online
-                        </button>
-                    </form>
+                        <form method="POST" action="{{ route('tenant.payments.pay-online', $payment) }}">
+                            @csrf
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 text-sm font-medium">
+                                {{ config('services.payment_gateway') === 'fake' ? 'Open checkout' : 'Continue to secure checkout' }} · ₱{{ number_format($payment->amount, 2) }}
+                            </button>
+                        </form>
+                    @endif
                 </div>
 
                 <div class="bg-white border border-slate-200 rounded-xl p-6">

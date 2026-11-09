@@ -17,7 +17,7 @@ class OnlinePaymentService
 {
     public function gatewayName(): string
     {
-        return config('services.payment_gateway', 'fake') === 'paymongo' ? 'paymongo' : 'fake';
+        return config('services.payment_gateway', 'paymongo') === 'fake' ? 'fake' : 'paymongo';
     }
 
     public function isFake(): bool
@@ -25,7 +25,7 @@ class OnlinePaymentService
         return $this->gatewayName() === 'fake';
     }
 
-    /** The fake gateway has no real security, so it is only ever allowed on a developer machine. */
+    /** The fake gateway has no real settlement, so it is limited to local development and tests. */
     public function fakeAllowed(): bool
     {
         return $this->isFake() && app()->environment(['local', 'testing']);
@@ -50,7 +50,24 @@ class OnlinePaymentService
     public function startCheckout(Payment $payment, string $successUrl, string $cancelUrl): string
     {
         abort_unless($payment->canBeSubmittedByTenant(), 422, 'This payment cannot be paid online right now.');
+        if ($payment->payment_type === Payment::TYPE_RESERVATION_FEE) {
+            $application = $payment->application;
+            abort_unless(
+                $application
+                    && $application->status === 'approved'
+                    && (float) $payment->amount === (float) $application->reservation_fee
+                    && $application->reservation_terms_accepted_at
+                    && $application->reservation_terms_accepted_hash
+                    && hash_equals($application->reservation_terms_accepted_hash, hash('sha256', (string) $application->reservation_terms)),
+                422,
+                'You must agree to the owner’s current reservation terms before payment.'
+            );
+        }
         abort_if($this->isFake() && ! $this->fakeAllowed(), 503, 'Online payments are not configured.');
+        $existingUrl = data_get($payment->metadata, 'gateway_checkout_url');
+        if ($payment->gateway === $this->gatewayName() && $payment->gateway_checkout_id && $existingUrl) {
+            return $existingUrl;
+        }
 
         $result = $this->gateway()->createCheckout($payment, $successUrl, $cancelUrl);
 
@@ -59,6 +76,7 @@ class OnlinePaymentService
             'gateway' => $this->gatewayName(),
             'gateway_checkout_id' => $result['checkout_id'],
             'gateway_reference' => $result['reference'] ?? null,
+            'metadata' => array_merge($payment->metadata ?? [], ['gateway_checkout_url' => $result['payment_url']]),
         ]);
 
         PaymentEvent::create([
@@ -105,8 +123,8 @@ class OnlinePaymentService
         $paidMinor = data_get($session, 'attributes.payments.0.attributes.amount');
         $expectedMinor = (int) round(((float) $payment->amount) * 100);
 
-        if ($paidMinor !== null && (int) $paidMinor !== $expectedMinor) {
-            Log::warning('PayMongo amount mismatch; payment not marked paid.', [
+        if ($paidMinor === null || (int) $paidMinor !== $expectedMinor) {
+            Log::warning('PayMongo amount missing or mismatched; payment not marked paid.', [
                 'payment_id' => $payment->id, 'expected' => $expectedMinor, 'received' => $paidMinor,
             ]);
 
@@ -147,6 +165,20 @@ class OnlinePaymentService
                 return $locked;
             }
 
+            if ($locked->payment_type === Payment::TYPE_RESERVATION_FEE) {
+                $application = $locked->application;
+                abort_unless(
+                    $application
+                        && $application->status === 'approved'
+                        && (float) $locked->amount === (float) $application->reservation_fee
+                        && $application->reservation_terms_accepted_at
+                        && $application->reservation_terms_accepted_hash
+                        && hash_equals($application->reservation_terms_accepted_hash, hash('sha256', (string) $application->reservation_terms)),
+                    422,
+                    'The reservation terms or fee changed after acceptance; payment cannot be confirmed.'
+                );
+            }
+
             $fromStatus = $locked->status;
 
             $locked->update([
@@ -155,7 +187,7 @@ class OnlinePaymentService
                 'gateway' => $gateway,
                 'gateway_payment_id' => $gatewayPaymentId,
                 // The rest of the app only knows these methods; the real one is kept in metadata.
-                'payment_method' => $method === 'gcash' ? 'gcash' : 'other',
+                'payment_method' => in_array($method, ['gcash', 'bank_transfer'], true) ? $method : 'other',
                 'reference_number' => $locked->gateway_reference ?: $locked->reference_number,
                 'payment_date' => today(),
                 'paid_at' => now(),
@@ -168,15 +200,23 @@ class OnlinePaymentService
                 'actor_id' => null,
                 'from_status' => $fromStatus,
                 'to_status' => 'paid',
-                'reason' => 'Paid online ('.$gateway.'); confirmed automatically.',
+                'reason' => $gateway === 'fake'
+                    ? 'Payment recorded via '.str($method)->replace('_', ' ')->title().'.'
+                    : 'Paid online ('.$gateway.'); confirmed automatically.',
             ]);
 
             $fresh = $locked->fresh();
 
             $fresh->tenant->notify(new PaymentReviewedNotification($fresh));
 
-            $contract = $fresh->contract()->with('property.managers', 'owner')->first();
-            $recipients = collect([$contract->owner])->merge($contract->property->managers)->filter()->unique('id');
+            if ($fresh->rental_application_id) {
+                $application = $fresh->application()->with('property.managers', 'property.owner')->first();
+                $recipients = collect([$application?->property?->owner])->merge($application?->property?->managers ?? collect());
+            } else {
+                $contract = $fresh->contract()->with('property.managers', 'owner')->first();
+                $recipients = collect([$contract?->owner])->merge($contract?->property?->managers ?? collect());
+            }
+            $recipients = $recipients->filter()->unique('id');
             foreach ($recipients as $recipient) {
                 $recipient->notify(new OnlinePaymentReceivedNotification($fresh));
             }

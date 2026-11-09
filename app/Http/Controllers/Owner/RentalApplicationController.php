@@ -29,7 +29,8 @@ class RentalApplicationController extends Controller
             })
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('owner.applications.index', compact('applications'));
     }
@@ -38,7 +39,7 @@ class RentalApplicationController extends Controller
     {
         $this->authorize('view', $application);
 
-        $application->load(['property', 'rentalSpace', 'documents', 'user']);
+        $application->load(['property', 'rentalSpace', 'documents', 'user', 'reservationFeePayment']);
 
         return view('owner.applications.show', compact('application'));
     }
@@ -49,7 +50,8 @@ class RentalApplicationController extends Controller
             $application,
             $request->string('status'),
             $request->input('decision_reason'),
-            $request->user()
+            $request->user(),
+            $request->safe()->only(['reservation_fee', 'reservation_terms'])
         );
 
         return back()->with('status', 'Application updated.');

@@ -1,11 +1,17 @@
 {{--
     Upload box used on the application form.
-    Params: $key (document type), $label, $when (JS expression: show/require only when true)
+    Params: $key (document type), $label, $when (JS expression: show/require only when true),
+            optional $labelExpression (Alpine expression for a dynamic label)
 --}}
 @php $inputId = 'doc_'.$key; @endphp
 <div x-data="{ file: '' }" class="min-w-0">
     <label for="{{ $inputId }}" class="block text-sm font-medium text-slate-700 mb-1.5">
-        {{ $label }} <span class="text-rose-600" aria-hidden="true">*</span>
+        @isset($labelExpression)
+            <span x-text="{{ $labelExpression }}">{{ $label }}</span>
+        @else
+            {{ $label }}
+        @endisset
+        <span class="text-rose-600" aria-hidden="true">*</span>
     </label>
 
     <label for="{{ $inputId }}" class="rt-drop flex items-center gap-3 cursor-pointer rounded-xl border-2 border-dashed border-slate-300 px-4 py-3.5 transition">

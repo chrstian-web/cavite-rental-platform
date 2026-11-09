@@ -8,7 +8,7 @@
     @if ($properties->count() < 2)
         <div class="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500">
             Select at least 2 properties from the listings page to compare.
-            <a href="{{ route('properties.index') }}" class="text-blue-600 hover:underline block mt-2">Browse listings</a>
+            <a href="{{ route('properties.index') }}" class="mx-auto mt-4 flex w-fit items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Browse listings</a>
         </div>
     @else
         @php
@@ -97,7 +97,7 @@
                         <td class="p-4 text-slate-500"></td>
                         @foreach ($properties as $property)
                             <td class="p-4">
-                                <a href="{{ route('properties.show', $property->slug) }}" class="text-blue-600 hover:underline">View details</a>
+                                <a href="{{ route('properties.show', $property->slug) }}" class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">View details</a>
                             </td>
                         @endforeach
                     </tr>

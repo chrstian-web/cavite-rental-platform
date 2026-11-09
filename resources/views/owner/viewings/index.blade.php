@@ -58,7 +58,7 @@
                                                           class="rounded-lg border-slate-300 text-xs w-full sm:w-72"></textarea>
                                             </span>
                                         </template>
-                                        <button class="text-blue-600 text-xs hover:underline">Update</button>
+                                        <button type="submit" class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Update</button>
                                     </form>
                                 @endif
                             </td>

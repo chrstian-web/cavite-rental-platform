@@ -7,6 +7,7 @@ use App\Models\RentalApplication;
 use App\Models\RentalSpace;
 use App\Models\User;
 use App\Notifications\NewRentalApplicationNotification;
+use App\Notifications\ReservationFeeOfferedNotification;
 use App\Notifications\RentalApplicationStatusNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -53,17 +54,37 @@ class RentalApplicationService
         });
     }
 
-    public function review(RentalApplication $application, string $status, ?string $reason, User $reviewer): RentalApplication
+    public function review(RentalApplication $application, string $status, ?string $reason, User $reviewer, array $offer = []): RentalApplication
     {
-        $application->update([
-            'status' => $status,
-            'decision_reason' => $reason,
-            'reviewed_by' => $reviewer->id,
-            'reviewed_at' => now(),
-        ]);
+        [$application, $alreadyApproved] = DB::transaction(function () use ($application, $status, $reason, $reviewer, $offer) {
+            $application = RentalApplication::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            $alreadyApproved = $application->status === 'approved';
+            abort_if($alreadyApproved && ($status !== 'approved' || $application->reservation_terms_accepted_at), 422, 'An accepted reservation offer cannot be changed.');
+            abort_if($alreadyApproved && $application->hasPaidReservationFee(), 422, 'A paid reservation offer cannot be changed.');
+
+            $application->update([
+                'status' => $status,
+                'decision_reason' => $reason ?? $application->decision_reason,
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                ...($status === 'approved' ? [
+                    'reservation_fee' => $offer['reservation_fee'],
+                    'reservation_terms' => $offer['reservation_terms'],
+                    'reservation_offer_sent_at' => now(),
+                ] : []),
+            ]);
+
+            return [$application->fresh(['property', 'rentalSpace', 'user']), $alreadyApproved];
+        });
 
         if (in_array($status, ['approved', 'rejected'], true)) {
-            $application->user->notify(new RentalApplicationStatusNotification($application));
+            if (! $alreadyApproved) {
+                $application->user->notify(new RentalApplicationStatusNotification($application));
+            }
+
+            if ($status === 'approved') {
+                $application->user->notify(new ReservationFeeOfferedNotification($application));
+            }
         }
 
         return $application->fresh();

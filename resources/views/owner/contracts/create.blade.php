@@ -39,7 +39,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Lease end date</label>
-                <input type="date" name="end_date" required
+                <input type="date" name="end_date" value="{{ old('end_date', $application->lease_end_date?->format('Y-m-d')) }}" required
                     class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
             </div>
         </div>

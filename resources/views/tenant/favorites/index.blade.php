@@ -30,7 +30,7 @@
                     <div class="px-4 pb-4">
                         <form method="POST" action="{{ route('tenant.favorites.toggle', $property) }}">
                             @csrf
-                            <button class="text-xs text-red-500 hover:underline">Remove from favorites</button>
+                            <button type="submit" class="inline-flex min-h-9 items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft rt-soft-red">Remove from favorites</button>
                         </form>
                     </div>
                 </div>

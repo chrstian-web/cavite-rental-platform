@@ -198,6 +198,7 @@ class OnboardingTest extends TestCase
         $owner = User::factory()->owner()->create();
 
         $this->actingAs($owner)->postJson('/onboarding/checklist/seen', ['key' => 'favorite'])->assertForbidden();
+        $this->actingAsGuest();
         $this->post('/onboarding/checklist/seen')->assertRedirect('/login');
     }
 

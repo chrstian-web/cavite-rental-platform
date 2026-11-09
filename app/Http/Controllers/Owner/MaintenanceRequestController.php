@@ -26,9 +26,12 @@ class MaintenanceRequestController extends Controller
                 $q->when($user->isOwner(), fn ($q2) => $q2->where('owner_id', $user->id))
                   ->when($user->isManager(), fn ($q2) => $q2->whereHas('managers', fn ($q3) => $q3->where('users.id', $user->id)));
             })
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('status'), fn ($q) => $request->string('status')->toString() === 'open'
+                ? $q->whereIn('status', ['submitted', 'in_progress'])
+                : $q->where('status', $request->string('status')))
             ->latest()
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('owner.maintenance.index', compact('requests'));
     }

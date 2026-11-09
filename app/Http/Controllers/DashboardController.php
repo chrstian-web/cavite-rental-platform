@@ -43,10 +43,6 @@ class DashboardController extends Controller
             'totalProperties' => Property::count(),
             'totalUnits' => RentalSpace::whereHas('property')->count(),
             'occupiedUnits' => RentalSpace::whereHas('property')->occupied()->count(),
-            'monthlyRevenue' => Payment::where('status', 'paid')
-                ->whereMonth('payment_date', now()->month)
-                ->whereYear('payment_date', now()->year)
-                ->sum('amount'),
 
             // Users by role.
             'totalOwners' => $roleCount('owner'),
@@ -136,6 +132,10 @@ class DashboardController extends Controller
             ->pluck('id');
 
         return [
+            // Units live under a property. With one property, go straight to its units; otherwise pick one from the list.
+            'unitsUrl' => $propertyIds->count() === 1
+                ? route('owner.properties.spaces.index', $propertyIds->first())
+                : route('owner.properties.index'),
             'totalProperties' => $propertyIds->count(),
             'totalUnits' => RentalSpace::whereIn('property_id', $propertyIds)->count(),
             'availableUnits' => RentalSpace::whereIn('property_id', $propertyIds)->openForRent()->count(),
@@ -166,7 +166,7 @@ class DashboardController extends Controller
         return [
             'activeContract' => $activeContract,
             'recentApplications' => RentalApplication::where('user_id', $user->id)->with('property')->latest()->take(3)->get(),
-            'upcomingPayment' => Payment::where('user_id', $user->id)->where('status', 'pending')->orderBy('due_date')->first(),
+            'upcomingPayment' => Payment::where('user_id', $user->id)->whereNull('rental_application_id')->where('status', 'pending')->orderBy('due_date')->first(),
             'rentSchedule' => $activeContract ? app(\App\Services\RentScheduleService::class)->forContract($activeContract) : null,
             'upcomingViewings' => $user->viewingRequests()->whereIn('status', ['pending', 'confirmed'])->with('property')->orderBy('preferred_date')->take(3)->get(),
             'favoritesCount' => $user->favorites()->count(),

@@ -22,8 +22,8 @@
 
     <div class="section">
         <table>
-            <tr><td class="label">Property</td><td>{{ $payment->contract->property->name }}</td></tr>
-            <tr><td class="label">Tenant</td><td>{{ $payment->contract->tenant->first_name }} {{ $payment->contract->tenant->last_name }} ({{ $payment->contract->tenant->email }})</td></tr>
+            <tr><td class="label">Property</td><td>{{ $payment->application?->property?->name ?? $payment->contract?->property?->name }}</td></tr>
+            <tr><td class="label">Tenant</td><td>{{ $payment->tenant->first_name }} {{ $payment->tenant->last_name }} ({{ $payment->tenant->email }})</td></tr>
             <tr><td class="label">Amount</td><td>₱{{ number_format($payment->amount, 2) }}</td></tr>
             <tr><td class="label">Due date</td><td>{{ $payment->due_date->format('F j, Y') }}</td></tr>
             <tr><td class="label">Payment date</td><td>{{ $payment->payment_date?->format('F j, Y') ?? '—' }}</td></tr>

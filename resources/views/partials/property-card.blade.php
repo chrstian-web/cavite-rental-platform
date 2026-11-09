@@ -77,11 +77,11 @@
 
     @if ($showRemoveFavorite)
         <div class="px-4 sm:px-5 pb-4 sm:pb-5 -mt-1">
-            <form method="POST" action="{{ route('tenant.favorites.toggle', $property) }}">
+            <form method="POST" action="{{ route('tenant.favorites.toggle', $property) }}" data-fav-toggle>
                 @csrf
                 <button type="submit"
                         class="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 font-medium min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 rounded-lg px-1">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <svg class="fav-heart w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
                     </svg>
                     Remove from favorites

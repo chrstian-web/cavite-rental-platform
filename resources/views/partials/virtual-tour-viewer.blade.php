@@ -223,7 +223,7 @@
 <div id="{{ $viewerId }}-overlay" class="tour-viewer-overlay fixed inset-0 bg-slate-950 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="{{ $viewerId }}-title">
     <div class="absolute inset-0" id="{{ $viewerId }}-full" aria-label="Interactive 360 degree virtual tour"></div>
 
-    <div class="absolute top-0 inset-x-0 z-20 p-3 sm:p-5 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+    <div data-tour-chrome class="absolute top-0 inset-x-0 z-20 p-3 sm:p-5 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="pointer-events-auto min-w-0">
                 <p id="{{ $viewerId }}-title" class="text-white font-semibold truncate"></p>
@@ -247,6 +247,10 @@
         </div>
     </div>
 
+    <button type="button" id="{{ $viewerId }}-chrome-toggle" class="absolute right-3 top-3 z-30 rounded-full bg-black/55 border border-white/20 px-3 py-2 text-white text-sm hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-white" aria-label="Minimize tour controls" aria-expanded="true" title="Minimize tour controls">
+        <span aria-hidden="true">−</span><span class="sr-only">Minimize tour controls</span>
+    </button>
+
     <div id="{{ $viewerId }}-loading" class="absolute inset-0 z-10 grid place-items-center pointer-events-none" role="status" aria-live="polite">
         <div class="rounded-xl bg-black/65 px-4 py-3 text-sm text-white">Loading 360° scene…</div>
     </div>
@@ -262,7 +266,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.79 15.79a.75.75 0 01-1.06 0l-5-5a.75.75 0 010-1.06l5-5a.75.75 0 111.06 1.06L8.32 10.25l4.47 4.48a.75.75 0 010 1.06z" clip-rule="evenodd" /></svg>
     </button>
 
-    <div class="absolute bottom-0 inset-x-0 z-20 p-3 sm:p-5 bg-gradient-to-t from-black/80 via-black/45 to-transparent">
+    <div data-tour-chrome class="absolute bottom-0 inset-x-0 z-20 p-3 sm:p-5 bg-gradient-to-t from-black/80 via-black/45 to-transparent">
         <div class="flex items-end gap-3">
             <div id="{{ $viewerId }}-thumbnails" class="tour-viewer-thumbnails flex gap-2 overflow-x-auto pb-1 min-w-0" role="list" aria-label="Tour scenes"></div>
             <button type="button" onclick="window['{{ $viewerId }}_closeFullscreen']()" class="shrink-0 rounded-full bg-black/55 border border-white/20 p-3 text-white hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-white" aria-label="Exit virtual tour">
@@ -279,7 +283,7 @@
     const ids = {
         inline: '{{ $viewerId }}-inline', overlay: '{{ $viewerId }}-overlay', full: '{{ $viewerId }}-full',
         title: '{{ $viewerId }}-title', description: '{{ $viewerId }}-description', loading: '{{ $viewerId }}-loading',
-        error: '{{ $viewerId }}-error', retry: '{{ $viewerId }}-retry', previous: '{{ $viewerId }}-previous',
+        error: '{{ $viewerId }}-error', retry: '{{ $viewerId }}-retry', previous: '{{ $viewerId }}-previous', chromeToggle: '{{ $viewerId }}-chrome-toggle',
         thumbnails: '{{ $viewerId }}-thumbnails', photoMode: '{{ $viewerId }}-photo-mode', animateMode: '{{ $viewerId }}-animate-mode'
     };
     let inlineViewer = null;
@@ -287,10 +291,25 @@
     let currentScene = firstScene;
     let sceneHistory = [];
     let lastFocusedElement = null;
+    let chromeMinimized = false;
 
     function el(key) { return document.getElementById(ids[key]); }
     function setLoading(show) { el('loading').classList.toggle('hidden', !show); }
     function setError(show) { el('error').classList.toggle('grid', show); el('error').classList.toggle('hidden', !show); }
+    function setChromeMinimized(minimized) {
+        chromeMinimized = minimized;
+        el('overlay').querySelectorAll('[data-tour-chrome]').forEach(function (chrome) {
+            chrome.classList.toggle('hidden', minimized);
+        });
+        const toggle = el('chromeToggle');
+        if (!toggle) return;
+        toggle.setAttribute('aria-expanded', minimized ? 'false' : 'true');
+        toggle.setAttribute('aria-label', minimized ? 'Show tour controls' : 'Minimize tour controls');
+        toggle.title = minimized ? 'Show tour controls' : 'Minimize tour controls';
+        toggle.innerHTML = minimized
+            ? '<span aria-hidden="true">+</span><span class="sr-only">Show tour controls</span>'
+            : '<span aria-hidden="true">−</span><span class="sr-only">Minimize tour controls</span>';
+    }
     function setMode(animate) {
         el('photoMode').classList.toggle('bg-white/20', !animate);
         el('animateMode').classList.toggle('bg-white/20', animate);
@@ -397,6 +416,7 @@
         });
         el('photoMode').addEventListener('click', function () { setMode(false); });
         el('animateMode').addEventListener('click', function () { setMode(true); });
+        el('chromeToggle').addEventListener('click', function () { setChromeMinimized(!chromeMinimized); });
         el('retry').addEventListener('click', function () { loadFullScene(currentScene, false); });
         el('previous').addEventListener('click', function () {
             const previous = sceneHistory.pop();
@@ -414,6 +434,7 @@
         const overlay = el('overlay');
         overlay.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        setChromeMinimized(false);
         sceneHistory = [];
         if (!fullViewer) {
             fullViewer = pannellum.viewer(ids.full, baseConfig());
@@ -428,6 +449,7 @@
     window['{{ $viewerId }}_closeFullscreen'] = function () {
         el('overlay').classList.add('hidden');
         document.body.style.overflow = '';
+        setChromeMinimized(false);
         setMode(false);
         if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') lastFocusedElement.focus();
     };

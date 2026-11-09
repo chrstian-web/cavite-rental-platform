@@ -6,6 +6,7 @@
     <title>@yield('title', 'Cavite Rental Platform')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     @include('partials.form-fields')
+    @include('partials.button-effects')
     @include('partials.pwa')
 </head>
 <body class="min-h-screen bg-slate-50 flex items-center justify-center px-4">

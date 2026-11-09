@@ -17,4 +17,6 @@
             Save changes
         </button>
     </form>
+
+    @include('owner.properties.spaces._images', ['property' => $property, 'space' => $space])
 @endsection

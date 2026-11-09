@@ -16,6 +16,17 @@
             outline-offset: 3px;
         }
         .tour-placement-marker.is-dragging { cursor: grabbing; outline-color: #f59e0b; }
+        #hotspot-editor-viewer-slot .tour-inline-viewer {
+            position: absolute !important;
+            inset: 0;
+            width: 100vw !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+            border-radius: 0 !important;
+        }
+        @supports not (height: 100dvh) {
+            #hotspot-editor-viewer-slot .tour-inline-viewer { height: 100vh !important; min-height: 100vh !important; }
+        }
     </style>
 @endpush
 
@@ -116,57 +127,17 @@
                                     <form action="{{ route('owner.properties.tour.scenes.destroy', [$property, $tour, $scene]) }}" method="POST"
                                           onsubmit="return confirm('Remove this scene?')">
                                         @csrf @method('DELETE')
-                                        <button class="text-red-600 text-xs hover:underline">Remove</button>
+                                        <x-delete-button label="Remove" />
                                     </form>
                                 </div>
 
-                                {{-- Add hotspot to this scene --}}
-                                <details class="mt-3">
-                                    <summary class="text-xs text-blue-600 cursor-pointer">+ Add hotspot (link to another scene)</summary>
-                                    <p class="text-xs text-slate-400 mt-2">
-                                        Click <strong>Place arrow on preview</strong>, then click the panorama where the
-                                        arrow should appear. You can drag the panorama first to find the correct view.
-                                    </p>
-                                    <form action="{{ route('owner.properties.tour.hotspots.store', [$property, $tour, $scene]) }}" method="POST"
-                                          class="grid grid-cols-2 gap-2 mt-2">
-                                        @csrf
-                                        <select name="target_scene_id" class="col-span-2 rounded-lg border-slate-300 text-xs">
-                                            <option value="">Info hotspot (no navigation)</option>
-                                            @foreach ($tour->scenes as $target)
-                                                @if ($target->id !== $scene->id)
-                                                    <option value="{{ $target->id }}">Go to: {{ $target->title }}</option>
-                                                @endif
-                                            @endforeach
-                                        </select>
-                                        <input type="text" name="label" placeholder="Label (e.g. To Kitchen)" class="rounded-lg border-slate-300 text-xs">
-                                        <input type="hidden" name="type" value="navigation">
-                                        <input id="hotspot-yaw-{{ $scene->id }}" type="number" step="0.01" name="position_x" placeholder="Yaw (-180 to 180)" required
-                                            class="rounded-lg border-slate-300 text-xs">
-                                        <input id="hotspot-pitch-{{ $scene->id }}" type="number" step="0.01" name="position_y" placeholder="Pitch, e.g. -50 for floor" required
-                                            class="rounded-lg border-slate-300 text-xs">
-                                        <div class="col-span-2">
-                                            <div class="flex items-center justify-between mb-1">
-                                                <label for="hotspot-size-{{ $scene->id }}" class="text-xs font-medium text-slate-700">Arrow size</label>
-                                                <output id="hotspot-size-out-{{ $scene->id }}" class="text-xs text-slate-500">56 px</output>
-                                            </div>
-                                            <input id="hotspot-size-{{ $scene->id }}" type="range" name="size" min="24" max="140" step="2" value="56"
-                                                data-size-slider="{{ $scene->id }}" class="w-full">
-                                            <div class="flex gap-2 mt-1">
-                                                @foreach ([['Small', 36], ['Medium', 56], ['Large', 90]] as [$sizeLabel, $sizePx])
-                                                    <button type="button" data-size-preset="{{ $scene->id }}" data-size="{{ $sizePx }}"
-                                                        class="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs rounded-lg py-1">{{ $sizeLabel }}</button>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                        <button type="button" data-place-hotspot="{{ $scene->id }}"
-                                            class="col-span-2 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs rounded-lg py-1.5">
-                                            Place arrow on preview
-                                        </button>
-                                        <button type="submit" class="col-span-2 bg-slate-800 hover:bg-slate-900 text-white text-xs rounded-lg py-1.5">
-                                            Add hotspot
-                                        </button>
-                                    </form>
-                                </details>
+                                <div class="mt-3 flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <p class="text-xs text-slate-500">Place a navigation arrow or information marker on this scene.</p>
+                                    <button type="button" data-open-hotspot-editor="{{ $scene->id }}" data-scene-title="{{ $scene->title }}"
+                                        class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                                        <span aria-hidden="true">＋</span> Add hotspot
+                                    </button>
+                                </div>
 
                                 @if ($scene->hotspots->isNotEmpty())
                                     <ul class="mt-2 text-xs text-slate-500 space-y-2">
@@ -176,7 +147,7 @@
                                                     <span>{{ $hotspot->label ?? 'Hotspot' }} (yaw {{ $hotspot->position_x }}, pitch {{ $hotspot->position_y }})</span>
                                                     <form action="{{ route('owner.properties.tour.hotspots.destroy', [$property, $tour, $scene, $hotspot]) }}" method="POST">
                                                         @csrf @method('DELETE')
-                                                        <button class="text-red-500 hover:underline">remove</button>
+                                                        <x-delete-button label="Remove" size="sm" />
                                                     </form>
                                                 </div>
                                                 @if ($hotspot->target_scene_id)
@@ -187,7 +158,7 @@
                                                         <input type="range" name="size" min="24" max="140" step="2" value="{{ $hotspot->size ?? 56 }}"
                                                             data-saved-size="{{ $hotspot->id }}" data-saved-scene="{{ $scene->id }}" class="flex-1">
                                                         <output class="w-10 text-right">{{ $hotspot->size ?? 56 }}px</output>
-                                                        <button class="text-blue-600 hover:underline">save</button>
+                                                        <button type="submit" class="inline-flex min-h-9 items-center justify-center rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Save</button>
                                                     </form>
                                                 @endif
                                             </li>
@@ -200,6 +171,89 @@
                 @endif
             </div>
         </div>
+
+        <div id="hotspot-editor-form-storage" class="hidden" aria-hidden="true">
+            @foreach ($tour->scenes as $scene)
+                <form action="{{ route('owner.properties.tour.hotspots.store', [$property, $tour, $scene]) }}" method="POST"
+                      data-hotspot-form="{{ $scene->id }}" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label for="hotspot-target-{{ $scene->id }}" class="mb-1 block text-xs font-semibold text-slate-200">Hotspot action</label>
+                        <select id="hotspot-target-{{ $scene->id }}" name="target_scene_id" data-hotspot-target
+                                class="w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-blue-500">
+                            <option value="">Information marker — no scene change</option>
+                            @foreach ($tour->scenes as $target)
+                                @if ($target->id !== $scene->id)
+                                    <option value="{{ $target->id }}">Navigate to: {{ $target->title }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="type" value="info">
+                    </div>
+                    <div>
+                        <label for="hotspot-label-{{ $scene->id }}" class="mb-1 block text-xs font-semibold text-slate-200">Label <span class="font-normal text-slate-400">(optional)</span></label>
+                        <input id="hotspot-label-{{ $scene->id }}" type="text" name="label" maxlength="100" placeholder="e.g. To Kitchen or Large window"
+                               class="w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="hotspot-yaw-{{ $scene->id }}" class="mb-1 block text-xs font-semibold text-slate-200">Yaw</label>
+                            <input id="hotspot-yaw-{{ $scene->id }}" type="number" step="0.01" min="-180" max="180" name="position_x" placeholder="-180 to 180" required
+                                   class="w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="hotspot-pitch-{{ $scene->id }}" class="mb-1 block text-xs font-semibold text-slate-200">Pitch</label>
+                            <input id="hotspot-pitch-{{ $scene->id }}" type="number" step="0.01" min="-90" max="90" name="position_y" placeholder="-90 to 90" required
+                                   class="w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-1 flex items-center justify-between">
+                            <label for="hotspot-size-{{ $scene->id }}" class="text-xs font-semibold text-slate-200">Hotspot size</label>
+                            <output id="hotspot-size-out-{{ $scene->id }}" class="text-xs text-slate-300">56 px</output>
+                        </div>
+                        <input id="hotspot-size-{{ $scene->id }}" type="range" name="size" min="24" max="140" step="2" value="56"
+                               data-size-slider="{{ $scene->id }}" class="w-full accent-blue-500">
+                        <div class="mt-2 flex gap-2">
+                            @foreach ([['Small', 36], ['Medium', 56], ['Large', 90]] as [$sizeLabel, $sizePx])
+                                <button type="button" data-size-preset="{{ $scene->id }}" data-size="{{ $sizePx }}"
+                                        class="flex-1 rounded-lg border border-white/15 bg-white/5 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10">{{ $sizeLabel }}</button>
+                            @endforeach
+                        </div>
+                    </div>
+                    <button type="submit" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                        Save hotspot
+                    </button>
+                </form>
+            @endforeach
+        </div>
+
+        <div id="hotspot-editor-overlay" class="fixed inset-0 z-[80] hidden overflow-hidden bg-slate-950" role="dialog" aria-modal="true" aria-labelledby="hotspot-editor-title">
+            <div id="hotspot-editor-viewer-slot" class="absolute inset-0 overflow-hidden bg-slate-950"></div>
+            <div class="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-black/75 to-transparent p-4 sm:p-6">
+                <div class="pointer-events-auto min-w-0">
+                    <h2 id="hotspot-editor-title" class="truncate text-base font-semibold text-white sm:text-lg">Place a hotspot</h2>
+                    <p id="hotspot-editor-scene-title" class="mt-1 truncate text-xs text-white/70"></p>
+                </div>
+                <button type="button" data-close-hotspot-editor class="pointer-events-auto inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-white/20 bg-black/50 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                    <span aria-hidden="true">✕</span> Close
+                </button>
+            </div>
+            <aside id="hotspot-editor-settings" class="absolute inset-x-3 bottom-3 z-30 max-h-[58dvh] overflow-y-auto rounded-2xl border border-white/15 bg-slate-900/95 p-4 text-white shadow-2xl backdrop-blur-xl sm:inset-x-auto sm:right-5 sm:top-20 sm:bottom-auto sm:max-h-[calc(100dvh-6rem)] sm:w-[min(26rem,calc(100vw-2.5rem))] sm:p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-sm font-bold text-white">Hotspot settings</h3>
+                    <button type="button" data-toggle-hotspot-settings class="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-white/15 px-2 text-lg leading-none text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="Minimize hotspot settings" aria-expanded="true" title="Minimize hotspot settings">
+                        <span data-hotspot-settings-icon aria-hidden="true">−</span>
+                    </button>
+                </div>
+                <div id="hotspot-editor-settings-body">
+                    <p class="mt-1 text-xs leading-relaxed text-slate-300">Click the panorama to place or move the marker. Drag the arrow to fine-tune it.</p>
+                    <p id="hotspot-editor-status" class="mt-2 rounded-lg bg-blue-500/10 px-3 py-2 text-xs text-blue-100" role="status" aria-live="polite">Loading selected scene…</p>
+                    <div id="hotspot-editor-form-slot" class="mt-4"></div>
+                    <button type="button" data-close-hotspot-editor class="mt-3 min-h-10 w-full rounded-lg border border-white/15 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">Cancel</button>
+                </div>
+            </aside>
+        </div>
     @endif
 @endsection
 
@@ -209,33 +263,43 @@
         document.addEventListener('DOMContentLoaded', function () {
             const viewer = window['ownerTour_getInlineViewer'] && window['ownerTour_getInlineViewer']();
             const preview = document.getElementById('ownerTour-inline');
-            if (!viewer || !preview) {
-                // Don't fail silently: tell the owner and log the reason.
-                console.error('[tour editor] 360 viewer not ready.',
-                    { pannellumLoaded: typeof window.pannellum !== 'undefined',
-                      getInlineViewer: typeof window['ownerTour_getInlineViewer'],
-                      previewElement: !!preview });
-                document.querySelectorAll('[data-place-hotspot]').forEach(function (b) {
-                    b.addEventListener('click', function () {
-                        b.textContent = 'Preview not loaded — press Ctrl+F5 (see console F12)';
-                    });
+            const editor = document.getElementById('hotspot-editor-overlay');
+            const viewerSlot = document.getElementById('hotspot-editor-viewer-slot');
+            const formSlot = document.getElementById('hotspot-editor-form-slot');
+            const formStorage = document.getElementById('hotspot-editor-form-storage');
+            const statusElement = document.getElementById('hotspot-editor-status');
+            const sceneTitleElement = document.getElementById('hotspot-editor-scene-title');
+            const settingsBody = document.getElementById('hotspot-editor-settings-body');
+            const settingsToggle = document.querySelector('[data-toggle-hotspot-settings]');
+            const settingsIcon = document.querySelector('[data-hotspot-settings-icon]');
+            const launchButtons = document.querySelectorAll('[data-open-hotspot-editor]');
+            const closeButtons = document.querySelectorAll('[data-close-hotspot-editor]');
+            const previewHome = preview ? preview.parentElement : null;
+            const previewNextSibling = preview ? preview.nextSibling : null;
+
+            if (!viewer || !preview || !editor || !viewerSlot || !formSlot || !formStorage) {
+                console.error('[tour editor] The 360 viewer or hotspot editor could not be initialized.');
+                launchButtons.forEach(function (button) {
+                    button.disabled = true;
+                    button.title = 'The 360° viewer is unavailable. Refresh the page and try again.';
+                    button.classList.add('cursor-not-allowed', 'opacity-60');
                 });
                 return;
             }
 
             const MARKER_ID = 'owner-placement-marker';
-            const buttons = document.querySelectorAll('[data-place-hotspot]');
-            const originalLabels = new Map();
-            buttons.forEach(function (b) { originalLabels.set(b, b.textContent.trim()); });
-
             let activeSceneId = null;   // numeric scene id (string) we are placing an arrow in
-            let activeButton = null;
+            let activeTrigger = null;
+            let activeForm = null;
             let markerHs = null;        // the Pannellum hotspot config object (mutated while dragging)
             let markerSceneKey = null;  // e.g. "scene-3"
             let markerDiv = null;       // DOM element of the marker (for live resizing)
             let dragging = false;
             let nudge = 0.0005;
             let downPos = null;
+            let previousBodyOverflow = '';
+            let pendingLoadHandler = null;
+            let settingsCollapsed = false;
 
             // ---- helpers -------------------------------------------------------------
             function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
@@ -282,14 +346,24 @@
             }
 
             function setButtonLabel(text) {
-                if (activeButton) activeButton.textContent = text;
+                if (statusElement) statusElement.textContent = text;
+            }
+
+            function setSettingsCollapsed(collapsed) {
+                settingsCollapsed = collapsed;
+                if (settingsBody) {
+                    settingsBody.hidden = collapsed;
+                    settingsBody.style.display = collapsed ? 'none' : '';
+                }
+                if (settingsToggle) {
+                    settingsToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                    settingsToggle.setAttribute('aria-label', collapsed ? 'Expand hotspot settings' : 'Minimize hotspot settings');
+                    settingsToggle.title = collapsed ? 'Expand hotspot settings' : 'Minimize hotspot settings';
+                }
+                if (settingsIcon) settingsIcon.textContent = collapsed ? '+' : '−';
             }
 
             function resetButtons() {
-                buttons.forEach(function (b) {
-                    b.classList.remove('ring-2', 'ring-blue-500');
-                    b.textContent = originalLabels.get(b);
-                });
                 preview.classList.remove('ring-4', 'ring-blue-200');
             }
 
@@ -300,6 +374,76 @@
                 markerHs = null;
                 markerSceneKey = null;
                 markerDiv = null;
+            }
+
+            function closeEditor() {
+                if (editor.classList.contains('hidden')) return;
+
+                if (pendingLoadHandler) {
+                    viewer.off('load', pendingLoadHandler);
+                    pendingLoadHandler = null;
+                }
+                removeMarker();
+                resetButtons();
+                if (activeForm) formStorage.appendChild(activeForm);
+                activeForm = null;
+
+                if (previewHome) {
+                    const nextSibling = previewNextSibling && previewNextSibling.parentNode === previewHome
+                        ? previewNextSibling
+                        : null;
+                    previewHome.insertBefore(preview, nextSibling);
+                }
+
+                editor.classList.add('hidden');
+                document.body.style.overflow = previousBodyOverflow;
+                viewer.resize();
+
+                const restoreFocus = activeTrigger;
+                activeTrigger = null;
+                activeSceneId = null;
+                if (restoreFocus && typeof restoreFocus.focus === 'function') restoreFocus.focus();
+            }
+
+            function openEditor(trigger) {
+                if (!editor.classList.contains('hidden')) closeEditor();
+
+                const sceneId = String(trigger.dataset.openHotspotEditor);
+                const form = Array.from(formStorage.querySelectorAll('[data-hotspot-form]'))
+                    .find(function (candidate) { return candidate.dataset.hotspotForm === sceneId; });
+                if (!form) {
+                    console.error('[tour editor] No hotspot form found for scene ' + sceneId);
+                    return;
+                }
+
+                activeSceneId = sceneId;
+                activeTrigger = trigger;
+                activeForm = form;
+                form.reset();
+                const sizeSlider = form.querySelector('[data-size-slider]');
+                const sizeOutput = form.querySelector('output');
+                if (sizeSlider && sizeOutput) sizeOutput.textContent = sizeSlider.value + ' px';
+
+                const targetSelect = form.querySelector('[data-hotspot-target]');
+                const typeInput = form.querySelector('[name="type"]');
+                if (targetSelect && typeInput) typeInput.value = targetSelect.value ? 'navigation' : 'info';
+
+                sceneTitleElement.textContent = 'Adding a hotspot to ' + (trigger.dataset.sceneTitle || 'this scene');
+                formSlot.appendChild(form);
+                viewerSlot.appendChild(preview);
+                previousBodyOverflow = document.body.style.overflow;
+                document.body.style.overflow = 'hidden';
+                editor.classList.remove('hidden');
+                setSettingsCollapsed(false);
+                setButtonLabel('Loading selected scene…');
+
+                window.requestAnimationFrame(function () {
+                    if (editor.classList.contains('hidden') || activeForm !== form) return;
+                    viewer.resize();
+                    startPlacement(sceneId);
+                });
+                const closeButton = editor.querySelector('[data-close-hotspot-editor]');
+                if (closeButton) closeButton.focus();
             }
 
             // ---- dragging the marker ---------------------------------------------------
@@ -375,18 +519,17 @@
                 }
             }
 
-            function startPlacement(sceneId, button) {
+            function startPlacement(sceneId) {
+                if (pendingLoadHandler) {
+                    viewer.off('load', pendingLoadHandler);
+                    pendingLoadHandler = null;
+                }
                 removeMarker();
                 resetButtons();
 
                 activeSceneId = String(sceneId);
-                activeButton = button;
-                button.classList.add('ring-2', 'ring-blue-500');
-                preview.classList.add('ring-4', 'ring-blue-200');
-                button.textContent = 'Loading scene…';
-
-                // The preview sits above the forms — bring it into view.
-                preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setButtonLabel('Loading selected scene…');
+                viewer.resize();
 
                 const key = 'scene-' + activeSceneId;
                 if (viewer.getScene() === key) {
@@ -396,27 +539,48 @@
 
                 const onLoad = function () {
                     viewer.off('load', onLoad);
+                    if (pendingLoadHandler === onLoad) pendingLoadHandler = null;
                     if (activeSceneId !== null && 'scene-' + activeSceneId === key) addMarkerAtViewCenter();
                 };
+                pendingLoadHandler = onLoad;
                 viewer.on('load', onLoad);
                 viewer.loadScene(key);
 
                 window.setTimeout(function () {
-                    if (activeButton === button && button.textContent === 'Loading scene…') {
+                    if (activeSceneId === String(sceneId) && statusElement.textContent === 'Loading selected scene…') {
                         viewer.off('load', onLoad);
-                        button.textContent = 'Scene did not load — open the panorama image URL to check it exists';
+                        if (pendingLoadHandler === onLoad) pendingLoadHandler = null;
+                        setButtonLabel('The scene could not load. Check that the panorama image is available, then reopen the editor.');
                     }
                 }, 10000);
             }
 
-            buttons.forEach(function (button) {
+            launchButtons.forEach(function (button) {
                 button.addEventListener('click', function () {
                     try {
-                        startPlacement(this.dataset.placeHotspot, this);
+                        openEditor(this);
                     } catch (err) {
-                        console.error('[tour editor] could not place arrow:', err);
-                        this.textContent = 'Error: ' + (err && err.message ? err.message : err) + ' (see console F12)';
+                        console.error('[tour editor] could not open hotspot editor:', err);
+                        setButtonLabel('Could not open the editor. Please refresh and try again.');
                     }
+                });
+            });
+
+            closeButtons.forEach(function (button) {
+                button.addEventListener('click', closeEditor);
+            });
+            if (settingsToggle) {
+                settingsToggle.addEventListener('click', function () {
+                    setSettingsCollapsed(!settingsCollapsed);
+                });
+            }
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !editor.classList.contains('hidden')) closeEditor();
+            });
+            formStorage.querySelectorAll('[data-hotspot-target]').forEach(function (select) {
+                select.addEventListener('change', function () {
+                    const typeInput = select.form && select.form.querySelector('[name="type"]');
+                    if (typeInput) typeInput.value = select.value ? 'navigation' : 'info';
                 });
             });
 
@@ -465,7 +629,7 @@
 
             viewer.on('error', function (message) {
                 console.error('[tour editor] Pannellum error:', message);
-                if (activeButton) activeButton.textContent = 'Viewer error: ' + message;
+                if (activeSceneId !== null) setButtonLabel('Viewer error: ' + message);
             });
 
             // If the owner switches to another scene, drop the pending marker.
@@ -474,7 +638,8 @@
                     removeMarker();
                     resetButtons();
                     activeSceneId = null;
-                    activeButton = null;
+                    activeTrigger = null;
+                    setButtonLabel('The scene changed. Close this editor and reopen it for the scene you want to edit.');
                 }
             });
 

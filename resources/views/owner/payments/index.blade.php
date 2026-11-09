@@ -5,6 +5,10 @@
 @section('content')
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-xl font-semibold text-slate-900">Payments</h1>
+        <div class="inline-flex rounded-full bg-slate-100 p-1 text-sm">
+            <a href="{{ route('owner.payments.board') }}" class="px-4 py-1.5 rounded-full text-slate-500 hover:text-slate-900">Board</a>
+            <span class="px-4 py-1.5 rounded-full bg-white shadow-sm font-medium text-slate-900">List</span>
+        </div>
         @if ($pendingReviewCount > 0)
             <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
                 {{ $pendingReviewCount }} awaiting review
@@ -55,7 +59,7 @@
                             <td class="px-4 py-3 text-slate-600">{{ $payment->submitted_at?->format('M j, Y') ?? '—' }}</td>
                             <td class="px-4 py-3">@include('partials.payment-status-badge', ['payment' => $payment])</td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('owner.payments.show', $payment) }}" class="text-sm text-blue-600 hover:underline">
+                                <a href="{{ route('owner.payments.show', $payment) }}" class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">
                                     {{ $payment->canBeReviewed() ? 'Review' : 'View' }}
                                 </a>
                             </td>

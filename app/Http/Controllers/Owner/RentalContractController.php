@@ -26,8 +26,10 @@ class RentalContractController extends Controller
             ->with(['property', 'rentalSpace', 'tenant'])
             ->when($user->isOwner(), fn ($q) => $q->where('owner_id', $user->id))
             ->when($user->isManager(), fn ($q) => $q->whereHas('property.managers', fn ($q2) => $q2->where('users.id', $user->id)))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('owner.contracts.index', compact('contracts'));
     }
@@ -37,6 +39,7 @@ class RentalContractController extends Controller
         $this->authorize('update', $application->property);
 
         abort_unless($application->status === 'approved', 422, 'Only approved applications can become a contract.');
+        abort_unless($application->hasPaidReservationFee(), 422, 'The reservation fee must be paid before creating a rental contract.');
 
         $application->load(['rentalSpace', 'property']);
 
@@ -61,7 +64,7 @@ class RentalContractController extends Controller
             $this->contracts->ensureDownPayments($contract);
         }
 
-        $contract->load(['tenant', 'property', 'rentalSpace', 'payments']);
+        $contract->load(['tenant', 'property', 'rentalSpace', 'payments', 'application.reservationFeePayment']);
 
         return view('owner.contracts.show', compact('contract'));
     }

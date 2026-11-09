@@ -28,7 +28,7 @@ class NotificationAlertService
         }
 
         $payments = Payment::query()
-            ->with(['tenant', 'contract.property', 'contract.rentalSpace'])
+            ->with(['tenant', 'contract.property', 'contract.rentalSpace', 'application.property', 'application.rentalSpace'])
             ->whereIn('id', $notifications->map(fn ($n) => $n->data['payment_id'] ?? null)->filter()->unique())
             ->get()
             ->keyBy('id');
@@ -58,18 +58,22 @@ class NotificationAlertService
         $name = trim(($tenant->first_name ?? '').' '.($tenant->last_name ?? '')) ?: 'A renter';
         $amount = '₱'.number_format((float) $payment->amount, 2);
         $contract = $payment->contract;
+        $application = $payment->application;
         $method = $payment->payment_method ?: ($payment->isOnline() ? 'online' : null);
         $methodLabel = $method ? (string) str($method)->replace('_', ' ')->title() : null;
+        $isDemo = $payment->gateway === 'fake';
 
         [$kind, $headline, $status] = match ($type) {
-            'online_payment_received' => ['online', "{$name} paid {$amount}", 'Paid online · confirmed'],
+            'online_payment_received' => $isDemo
+                ? ['online', "Payment recorded for {$amount}", 'Payment received']
+                : ['online', "{$name} paid {$amount}", 'Paid online · confirmed'],
             'payment_submitted' => ['review', "{$name} submitted {$amount}", $payment->status === 'submitted' ? 'Needs your review' : ucfirst(str_replace('_', ' ', $payment->status))],
             default => ['details', "{$name} added payment proof", 'Proof added'],
         };
 
-        $place = trim(($contract?->property?->name ?? '').' — '.($contract?->rentalSpace?->space_number ?? ''), ' —');
+        $place = trim((($application?->property?->name ?? $contract?->property?->name) ?? '').' — '.(($application?->rentalSpace?->space_number ?? $contract?->rentalSpace?->space_number) ?? ''), ' —');
 
-        $chips = [['text' => $status, 'tone' => $kind === 'review' ? 'warn' : 'ok']];
+        $chips = [['text' => $status, 'tone' => ($isDemo || $kind === 'review') ? 'warn' : 'ok']];
         if ($methodLabel) {
             $chips[] = ['text' => $methodLabel, 'tone' => 'neutral'];
         }
@@ -87,7 +91,9 @@ class NotificationAlertService
             'chips' => $chips,
             'reference' => $payment->reference_number ?: $payment->gateway_reference,
             'when' => $createdAt->diffForHumans(),
-            'url' => route('owner.payments.show', $payment),
+            'url' => $application
+                ? route('owner.applications.show', $application)
+                : route('owner.payments.show', $payment),
             'cta' => $kind === 'review' ? 'Review' : 'View',
             // payment-specific extras
             'payment_id' => $payment->id,
@@ -143,6 +149,20 @@ class NotificationAlertService
                 array_filter([$status ? ['text' => $status, 'tone' => $tone] : null]),
                 route('tenant.applications.show', $d['application_id']), 'View', $isBad ? 'bad' : 'success',
             ],
+            'reservation_fee_offered' => [
+                'Payment', 'Reservation fee and terms received', $property,
+                [['text' => 'Reservation fee ₱'.number_format((float) ($d['reservation_fee'] ?? 0), 2), 'tone' => 'neutral'], ['text' => 'Agreement required before payment', 'tone' => 'warn']],
+                route('tenant.applications.show', $d['application_id']), 'Review terms', 'review',
+            ],
+            'online_payment_received' => [
+                'Payment', ! empty($d['demo_mode']) ? 'Payment recorded' : 'Reservation fee payment confirmed', $property,
+                array_filter([
+                    isset($d['amount']) ? ['text' => '₱'.number_format((float) $d['amount'], 2), 'tone' => 'ok'] : null,
+                    ! empty($d['tenant_name']) ? ['text' => 'Paid by '.$d['tenant_name'], 'tone' => 'neutral'] : null,
+                ]),
+                ! empty($d['application_id']) ? route('owner.applications.show', $d['application_id']) : route('owner.payments.show', $d['payment_id']),
+                ! empty($d['application_id']) ? 'View application' : 'View payment', 'success',
+            ],
             'new_property_submitted' => [
                 'Verification', 'New property needs verification', $property,
                 [['text' => 'Awaiting admin review', 'tone' => 'warn']],
@@ -189,9 +209,10 @@ class NotificationAlertService
                 ]), route('tenant.contracts.show', $d['contract_id']), 'Pay now', 'review',
             ],
             'payment_reviewed' => [
-                'Payment', 'Your payment was '.str($d['status'] ?? 'updated')->replace('_', ' '), null,
-                array_filter([$status ? ['text' => $status, 'tone' => $tone] : null]),
-                route('tenant.payments.show', $d['payment_id']), 'View', $isGood ? 'success' : ($isBad ? 'bad' : 'info'),
+                'Payment', ! empty($d['demo_mode']) ? 'Payment recorded' : 'Your payment was '.str($d['status'] ?? 'updated')->replace('_', ' '), null,
+                ! empty($d['demo_mode']) ? [] : array_filter([$status ? ['text' => $status, 'tone' => $tone] : null]),
+                ! empty($d['application_id']) ? route('tenant.applications.show', $d['application_id']) : route('tenant.payments.show', $d['payment_id']),
+                'View', ! empty($d['demo_mode']) ? 'info' : ($isGood ? 'success' : ($isBad ? 'bad' : 'info')),
             ],
             default => null,
         };

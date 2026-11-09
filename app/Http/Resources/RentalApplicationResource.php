@@ -21,6 +21,7 @@ class RentalApplicationResource extends JsonResource
                 'space_number' => $this->rentalSpace->space_number,
             ],
             'desired_move_in_date' => $this->desired_move_in_date->toDateString(),
+            'lease_end_date' => $this->lease_end_date?->toDateString(),
             'number_of_occupants' => $this->number_of_occupants,
             'status' => $this->status,
             'decision_reason' => $this->decision_reason,

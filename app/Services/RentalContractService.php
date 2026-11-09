@@ -18,10 +18,12 @@ class RentalContractService
      */
     public function createFromApplication(RentalApplication $application, array $data): RentalContract
     {
-        abort_unless($application->status === 'approved', 422, 'Only approved applications can become a contract.');
-        abort_if($application->contract()->exists(), 422, 'A contract already exists for this application.');
-
         return DB::transaction(function () use ($application, $data) {
+            $application = RentalApplication::whereKey($application->id)->lockForUpdate()->firstOrFail();
+            abort_unless($application->status === 'approved', 422, 'Only approved applications can become a contract.');
+            abort_unless($application->hasPaidReservationFee(), 422, 'The reservation fee must be paid before creating a rental contract.');
+            abort_if($application->contract()->exists(), 422, 'A contract already exists for this application.');
+
             $contract = RentalContract::create([
                 ...$data,
                 'rental_application_id' => $application->id,

@@ -3,12 +3,12 @@
 @section('title', 'Notifications')
 
 @section('content')
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 class="text-xl font-semibold text-slate-900">Notifications</h1>
         <form method="POST" action="{{ route('notifications.readAll') }}">
             @csrf
             @method('PATCH')
-            <button class="text-sm text-blue-600 hover:underline">Mark all read</button>
+            <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Mark all read</button>
         </form>
     </div>
 

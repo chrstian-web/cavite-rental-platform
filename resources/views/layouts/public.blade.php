@@ -10,6 +10,7 @@
     <style>[x-cloak] { display: none !important; }</style>
     @stack('head')
     @include('partials.form-fields')
+    @include('partials.button-effects')
     @php $isLanding = trim($__env->yieldContent('body_class')) === 'landing'; @endphp
     @unless ($isLanding)
         @include('partials.theme-head')
@@ -30,11 +31,15 @@
 
             <!-- Logo & Left Links -->
             <div class="flex items-center gap-6">
-                <a href="{{ $homeUrl }}" class="font-extrabold tracking-tight text-lg text-slate-900 flex items-center gap-1">
-                    Cavite<span class="text-blue-600">Rentals</span>
+                <a href="{{ $homeUrl }}" class="font-extrabold tracking-tight text-lg text-slate-900 flex items-center {{ $isLanding ? 'gap-2.5' : 'gap-1' }}">
+                    @if ($isLanding)
+                        <img src="{{ asset('images/cavite-rentals-logo.svg') }}" alt="" width="34" height="38" class="h-9 w-auto">
+                    @endif
+                    <span>Cavite <span class="text-blue-600">Rentals</span></span>
                 </a>
 
-                <!-- Role-Based Main Navigation -->
+                <!-- Role-Based Main Navigation (the landing page keeps it clean for visitors: logo, Log in, Sign up) -->
+                @if (! $isLanding || auth()->check())
                 <div class="hidden lg:flex items-center gap-5 text-sm font-semibold text-slate-600">
                     <a href="{{ $homeUrl }}" class="hover:text-blue-600 transition">Home</a>
                     <a href="{{ route('properties.index') }}" class="hover:text-blue-600 transition">Properties</a>
@@ -48,6 +53,7 @@
                         @endif
                     @endauth
                 </div>
+                @endif
             </div>
 
             <!-- Search Component Bar (the landing hero has its own search, so skip it there) -->
@@ -87,7 +93,7 @@
                                     <form action="{{ route('notifications.readAll') }}" method="POST">
                                         @csrf
                                         @method('PATCH')
-                                        <button type="submit" class="text-xs text-blue-600 hover:underline">Mark all as read</button>
+                                        <button type="submit" class="inline-flex min-h-9 items-center justify-center rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Mark all as read</button>
                                     </form>
                                 @endif
                             </div>
@@ -101,7 +107,7 @@
                                 @endforelse
                             </div>
 
-                            <a href="{{ route('notifications.index') }}" class="block text-center text-xs text-blue-600 font-medium py-2 border-t border-slate-100 hover:bg-slate-50">
+                            <a href="{{ route('notifications.index') }}" class="block rounded-b-xl border-t border-slate-100 px-4 py-3 text-center text-xs font-semibold text-blue-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
                                 View All Notifications
                             </a>
                         </div>
@@ -166,6 +172,10 @@
         @yield('content')
     </main>
 
+    @if (auth()->check() && auth()->user()->isTenant())
+        @include('partials.onboarding-guide')
+    @endif
+
     <!-- Toast Notification for Flash Status -->
 @if (session('status'))
     <div id="flash-status" data-message="{{ session('status') }}" class="hidden"></div>
@@ -190,5 +200,6 @@
     @unless ($isLanding)
         @include('partials.theme-script')
     @endunless
+    @stack('scripts')
 </body>
 </html>

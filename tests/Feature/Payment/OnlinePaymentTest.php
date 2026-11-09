@@ -5,6 +5,7 @@ namespace Tests\Feature\Payment;
 use App\Models\Payment;
 use App\Models\Property;
 use App\Models\RentalContract;
+use App\Models\RentalApplication;
 use App\Models\RentalSpace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -90,6 +91,17 @@ class OnlinePaymentTest extends TestCase
 
         $response->assertRedirect();
         $this->assertStringContainsString('/fake-payments/', (string) $response->headers->get('Location'));
+        $checkoutId = basename((string) parse_url((string) $response->headers->get('Location'), PHP_URL_PATH));
+        $this->actingAs($tenant)->get(route('fake-checkout.show', $checkoutId))
+            ->assertOk()
+            ->assertDontSee('Demo checkout — no real money will be transferred.')
+            ->assertSee('GCash')
+            ->assertSee('Bank transfer');
+        $checkoutUrl = (string) $response->headers->get('Location');
+        $this->actingAs($tenant)
+            ->post(route('tenant.payments.pay-online', $payment))
+            ->assertRedirect($checkoutUrl);
+        $this->assertDatabaseCount('payment_events', 1);
 
         $payment->refresh();
         $this->assertSame('pending', $payment->status);   // not paid until the gateway confirms
@@ -106,7 +118,7 @@ class OnlinePaymentTest extends TestCase
         $payment->refresh();
 
         $this->actingAs($tenant)
-            ->post(route('fake-checkout.pay', $payment->gateway_checkout_id))
+            ->post(route('fake-checkout.pay', $payment->gateway_checkout_id), ['payment_method' => 'gcash'])
             ->assertRedirect(route('tenant.payments.show', $payment).'#payment-details');
 
         $payment->refresh();
@@ -116,7 +128,7 @@ class OnlinePaymentTest extends TestCase
         $this->assertSame(1, $owner->notifications()->count());
 
         // Paying again changes nothing and does not notify the owner twice.
-        $this->actingAs($tenant)->post(route('fake-checkout.pay', $payment->gateway_checkout_id));
+        $this->actingAs($tenant)->post(route('fake-checkout.pay', $payment->gateway_checkout_id), ['payment_method' => 'gcash']);
         $this->assertSame(1, $owner->fresh()->notifications()->count());
     }
 
@@ -126,6 +138,60 @@ class OnlinePaymentTest extends TestCase
         $other = User::factory()->tenant()->create();
 
         $this->actingAs($other)->post(route('tenant.payments.pay-online', $payment))->assertForbidden();
+    }
+
+    public function test_reservation_fee_requires_terms_acceptance_and_payment_before_contract_creation(): void
+    {
+        [$tenant, , $owner] = $this->payment();
+        $property = Property::where('owner_id', $owner->id)->firstOrFail();
+        $space = RentalSpace::factory()->create(['property_id' => $property->id]);
+        $application = RentalApplication::create([
+            'user_id' => $tenant->id,
+            'property_id' => $space->property_id,
+            'rental_space_id' => $space->id,
+            'desired_move_in_date' => now()->addWeek(),
+            'lease_end_date' => now()->addYear(),
+            'number_of_occupants' => 1,
+            'status' => 'approved',
+            'reservation_fee' => 2750,
+            'reservation_terms' => "Pay the fee before the contract is prepared.\nThe fee reserves the unit.",
+            'reservation_offer_sent_at' => now(),
+        ]);
+
+        $this->actingAs($tenant)
+            ->post(route('tenant.applications.reservation-fee.pay', $application))
+            ->assertSessionHasErrors('terms_accepted');
+        $this->assertDatabaseMissing('payments', ['rental_application_id' => $application->id]);
+
+        $this->actingAs($owner)
+            ->get(route('owner.applications.contract.create', $application))
+            ->assertStatus(422);
+
+        $this->actingAs($tenant)
+            ->post(route('tenant.applications.reservation-fee.pay', $application), ['terms_accepted' => '1'])
+            ->assertRedirect();
+
+        $payment = Payment::where('rental_application_id', $application->id)->firstOrFail();
+        $this->assertSame(Payment::TYPE_RESERVATION_FEE, $payment->payment_type);
+        $this->assertSame(2750.0, (float) $payment->amount);
+        $this->assertSame('pending', $payment->status);
+        $application->refresh();
+        $this->assertNotNull($application->reservation_terms_accepted_at);
+        $this->assertSame(hash('sha256', $application->reservation_terms), $application->reservation_terms_accepted_hash);
+        $this->assertSame(0, $owner->notifications()->count());
+
+        $this->actingAs($tenant)
+            ->post(route('fake-checkout.pay', $payment->fresh()->gateway_checkout_id), ['payment_method' => 'bank_transfer'])
+            ->assertRedirect(route('tenant.applications.show', $application));
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'payment_method' => 'bank_transfer']);
+        $ownerNotice = $owner->notifications()->where('data->type', 'online_payment_received')->firstOrFail();
+        $this->assertSame($application->id, (int) $ownerNotice->data['application_id']);
+
+        $this->actingAs($owner)
+            ->get(route('owner.applications.contract.create', $application))
+            ->assertOk();
     }
 
     // ── PayMongo webhook ─────────────────────────────────────────
@@ -189,6 +255,21 @@ class OnlinePaymentTest extends TestCase
 
         $this->sendWebhook($body, $signature)->assertOk();
 
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
+
+    public function test_webhook_without_an_amount_does_not_mark_the_payment_paid(): void
+    {
+        [$tenant, $payment] = $this->payment();
+        $payment = $this->startPaymongoCheckout($tenant, $payment);
+        [$body] = $this->signedWebhook($payment, 'evt_missing_amount');
+        $payload = json_decode($body, true);
+        unset($payload['data']['attributes']['data']['attributes']['payments'][0]['attributes']['amount']);
+        $body = json_encode($payload);
+        $timestamp = time();
+        $signature = 't='.$timestamp.',te='.hash_hmac('sha256', $timestamp.'.'.$body, 'whsec_test');
+
+        $this->sendWebhook($body, $signature)->assertOk();
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
     }
 

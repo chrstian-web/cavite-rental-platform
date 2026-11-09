@@ -8,6 +8,7 @@
     <form method="GET" class="mb-4">
         <select name="status" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm">
             <option value="">All statuses</option>
+            <option value="open" @selected(request('status') === 'open')>Open (submitted + in progress)</option>
             @foreach (['submitted', 'in_progress', 'resolved', 'closed'] as $status)
                 <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->replace('_',' ')->title() }}</option>
             @endforeach
@@ -60,14 +61,14 @@
                     @endif
 
                     @if (! in_array($request->status, ['resolved', 'closed']))
-                        <form method="POST" action="{{ route('owner.maintenance.update', $request) }}" class="mt-3 flex items-center gap-2">
+                        <form method="POST" action="{{ route('owner.maintenance.update', $request) }}" class="mt-3 flex flex-wrap items-center gap-2">
                             @csrf @method('PATCH')
                             <select name="status" class="rounded-lg border-slate-300 text-xs">
                                 <option value="in_progress">Mark In Progress</option>
                                 <option value="resolved">Mark Resolved</option>
                                 <option value="closed">Close</option>
                             </select>
-                            <button class="text-blue-600 text-xs hover:underline">Update</button>
+                            <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Update</button>
                         </form>
                     @endif
                 </div>

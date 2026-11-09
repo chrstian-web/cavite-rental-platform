@@ -45,18 +45,19 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <div class="flex items-center justify-end gap-4">
-                                    <a href="{{ route('admin.owner-verifications.show', $verification) }}" class="text-blue-600 hover:underline">{{ $verification->isArchived() ? 'View' : 'Review' }}</a>
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <a href="{{ route('admin.owner-verifications.show', $verification) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">{{ $verification->isArchived() ? 'View' : 'Review' }}</a>
                                     @if ($verification->isArchived())
-                                        <form method="POST" action="{{ route('admin.owner-verifications.unarchive', $verification) }}">
+                                        <form method="POST" action="{{ route('admin.owner-verifications.unarchive', $verification) }}" class="inline-flex">
                                             @csrf @method('PATCH')
-                                            <button class="text-slate-500 hover:text-slate-900 hover:underline">Restore</button>
+                                            <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rt-soft rt-soft-emerald">Restore</button>
                                         </form>
                                     @elseif ($verification->status !== 'needs_review')
                                         <form method="POST" action="{{ route('admin.owner-verifications.archive', $verification) }}"
+                                              class="inline-flex"
                                               onsubmit="return confirm('Archive this submission? It will be hidden from the list but kept on record. You can restore it from the Archived filter.')">
                                             @csrf @method('PATCH')
-                                            <button class="text-slate-500 hover:text-slate-900 hover:underline">Archive</button>
+                                            <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rt-soft rt-soft-slate">Archive</button>
                                         </form>
                                     @endif
                                 </div>

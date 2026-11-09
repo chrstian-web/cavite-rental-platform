@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72" fill="none" role="img" aria-label="Cavite Rentals">
+  <path d="M6 14V38C6 52 18 62 32 68C46 62 58 52 58 38V14" stroke="#4F82B8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 14L12 12M58 14L52 12" stroke="#4F82B8" stroke-width="3" stroke-linecap="round"/>
+  <path d="M10 33L20 22L29 31" stroke="#8FB8E0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M35 31L44 22L54 33" stroke="#8FB8E0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="20" cy="30" r="1.6" fill="#8FB8E0"/>
+  <circle cx="44" cy="30" r="1.6" fill="#8FB8E0"/>
+  <g fill="#EAF0F5">
+    <circle cx="32" cy="7.5" r="3.6"/><circle cx="28.4" cy="13" r="3.6"/><circle cx="35.6" cy="13" r="3.6"/>
+    <rect x="30.8" y="14" width="2.4" height="24" rx="1.2"/>
+    <rect x="33" y="25" width="4.2" height="2.2" rx="1"/>
+    <rect x="33" y="30" width="3.2" height="2.2" rx="1"/>
+  </g>
+  <path d="M10 43q5.5-5 11 0t11 0t11 0t11 0" stroke="#9CC4EA" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M13 50q5-4.5 10 0t10 0t10 0t8 0" stroke="#6FA3D6" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M19 57q4.5-4 9 0t9 0t8 0" stroke="#4F82B8" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

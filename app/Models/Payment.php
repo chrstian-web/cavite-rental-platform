@@ -20,12 +20,13 @@ class Payment extends Model
     public const TYPE_MONTHLY_RENT = 'monthly_rent';
     public const TYPE_SECURITY_DEPOSIT = 'security_deposit';
     public const TYPE_ADVANCE_PAYMENT = 'advance_payment';
+    public const TYPE_RESERVATION_FEE = 'reservation_fee';
 
     /** Payments that must be settled before a contract can be activated (move-in). */
     public const DOWN_PAYMENT_TYPES = [self::TYPE_SECURITY_DEPOSIT, self::TYPE_ADVANCE_PAYMENT];
 
     protected $fillable = [
-        'rental_contract_id', 'user_id', 'payment_type', 'amount', 'currency', 'due_date', 'payment_date',
+        'rental_contract_id', 'rental_application_id', 'user_id', 'payment_type', 'amount', 'currency', 'due_date', 'payment_date',
         'payment_method', 'reference_number', 'status', 'notes',
         'proof_path', 'proof_original_filename', 'submitted_at',
         'reviewed_by', 'reviewed_at', 'review_reason',
@@ -50,6 +51,11 @@ class Payment extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(RentalContract::class, 'rental_contract_id');
+    }
+
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(RentalApplication::class, 'rental_application_id');
     }
 
     public function tenant(): BelongsTo

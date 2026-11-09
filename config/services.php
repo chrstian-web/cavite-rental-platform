@@ -28,14 +28,21 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    // Online payments. 'fake' = built-in test checkout (local/testing only, no real money).
-    // 'paymongo' = real PayMongo checkout (use sk_test_ keys for testing, sk_live_ for real money).
-    'payment_gateway' => env('PAYMENT_GATEWAY', 'fake'),
+    // Local development uses a clearly labeled demo checkout; production defaults to PayMongo.
+    'payment_gateway' => env('PAYMENT_GATEWAY', env('APP_ENV') === 'production' ? 'paymongo' : 'fake'),
 
     'paymongo' => [
         'secret_key' => env('PAYMONGO_SECRET_KEY', ''),
         'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET', ''),
-        'payment_methods' => ['card', 'gcash', 'qrph'],
+        'payment_methods' => array_values(array_intersect(
+            ['card', 'gcash', 'qrph'],
+            array_filter(array_map('trim', explode(',', env('PAYMONGO_PAYMENT_METHODS', 'card,gcash,qrph'))))
+        )),
+    ],
+
+    'maps' => [
+        'geocoder_url' => env('MAP_GEOCODER_URL', 'https://nominatim.openstreetmap.org/search'),
+        'tile_url' => env('MAP_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
     ],
 
     'slack' => [
