@@ -29,7 +29,7 @@
                                     <p class="text-xs text-slate-400">Expires {{ $doc->expiration_date->format('M j, Y') }}</p>
                                 @endif
                             </div>
-                            <button type="button" @click="$dispatch('open-docs', { id: 'owner-docs', index: {{ $loop->index }} })"
+                            <button type="button" x-data @click="$dispatch('open-docs', { id: 'owner-docs', index: {{ $loop->index }} })"
                                     class="shrink-0 text-blue-600 hover:underline text-xs">View</button>
                         </div>
                     @endforeach
