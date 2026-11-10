@@ -31,6 +31,7 @@ class Property extends Model
             'min_monthly_rent' => 'decimal:2',
             'max_monthly_rent' => 'decimal:2',
             'is_featured' => 'boolean',
+            'subscription_hidden' => 'boolean',
         ];
     }
 
@@ -116,6 +117,57 @@ class Property extends Model
     public function scopeAvailable($query)
     {
         return $query->where('availability_status', 'available');
+    }
+
+    /** Listings the owner's plan allows tenants to see. */
+    public function scopeVisibleToTenants($query)
+    {
+        return $query->where('properties.subscription_hidden', false);
+    }
+
+    /**
+     * Search boost: listings from owners on a paid plan come first, highest tier first.
+     * Tiers and plan names come from config/subscriptions.php, never from user input.
+     */
+    public function scopeBoostedFirst($query)
+    {
+        $cases = collect(config('subscriptions.plans'))
+            ->filter(fn ($plan) => $plan['boost'] > 0)
+            ->map(fn ($plan, $key) => "WHEN s.plan = '{$key}' THEN {$plan['boost']}")
+            ->implode(' ');
+
+        if ($cases === '') {
+            return $query;
+        }
+
+        return $query->orderByRaw(
+            "COALESCE((SELECT MAX(CASE {$cases} ELSE 0 END) FROM subscriptions s"
+            ." WHERE s.user_id = properties.owner_id AND s.status = 'active'"
+            ." AND (s.ends_at IS NULL OR s.ends_at > ?)), 0) DESC",
+            [now()]
+        );
+    }
+
+    /**
+     * Adds an `is_boosted` column (true when the owner is on a paid plan) so a result
+     * list can show a "Featured" badge without a query per card. Call it before
+     * withCount()/withAvg() so those keep selecting the property columns too.
+     */
+    public function scopeWithBoostFlag($query)
+    {
+        $plans = collect(config('subscriptions.plans'))->filter(fn ($plan) => $plan['boost'] > 0)->keys();
+
+        if ($plans->isEmpty()) {
+            return $query;
+        }
+
+        $list = $plans->map(fn ($key) => "'{$key}'")->implode(',');
+
+        return $query->addSelect('properties.*')->selectRaw(
+            "EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = properties.owner_id AND s.status = 'active'"
+            ." AND s.plan IN ({$list}) AND (s.ends_at IS NULL OR s.ends_at > ?)) AS is_boosted",
+            [now()]
+        );
     }
 
     public function scopeInLocation($query, int $locationId)

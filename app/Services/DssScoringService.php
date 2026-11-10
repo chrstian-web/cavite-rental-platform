@@ -24,7 +24,7 @@ class DssScoringService
         $spaces = RentalSpace::query()
             ->with(['property.location', 'property.amenities'])
             ->where('status', 'available')
-            ->whereHas('property', fn ($q) => $q->where('verification_status', 'verified')->available())
+            ->whereHas('property', fn ($q) => $q->where('verification_status', 'verified')->visibleToTenants()->available())
             ->get();
 
         $results = $spaces->map(function (RentalSpace $space) use ($preferences, $weights, $tenant, $persist) {

@@ -21,6 +21,7 @@ class ComparisonController extends Controller
         $properties = Property::query()
             ->with(['images' => fn ($q) => $q->where('is_cover', true), 'amenities', 'location', 'rentalSpaces'])
             ->withAvg('reviews', 'rating')
+            ->visibleToTenants()
             ->whereIn('id', $ids)
             ->get()
             ->sortBy(fn ($p) => array_search($p->id, $ids))

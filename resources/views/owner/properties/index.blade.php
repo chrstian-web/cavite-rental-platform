@@ -10,6 +10,26 @@
         </a>
     </div>
 
+    @if (auth()->user()->isOwner())
+        @php
+            $subs = app(\App\Services\SubscriptionService::class);
+            $planKey = $subs->currentPlanKey(auth()->user());
+            $plan = $subs->plan($planKey);
+            $total = $subs->propertyCount(auth()->user());
+            $hiddenCount = auth()->user()->properties()->where('subscription_hidden', true)->count();
+        @endphp
+        <div class="bg-white border border-slate-200 rounded-xl p-4 mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p class="text-slate-700">
+                <span class="font-semibold text-slate-900">{{ $plan['name'] }} plan</span>:
+                up to {{ $plan['max_properties'] }} properties shown to tenants{{ $plan['boost'] > 0 ? ', boosted in search' : '' }}.
+                @if ($hiddenCount > 0)
+                    <span class="text-amber-700 font-medium">{{ $hiddenCount }} of your {{ $total }} {{ \Illuminate\Support\Str::plural('property', $total) }} {{ $hiddenCount === 1 ? 'is' : 'are' }} hidden from tenants.</span>
+                @endif
+            </p>
+            <a href="{{ route('owner.subscription.index') }}" class="text-blue-600 hover:text-blue-700 font-medium">{{ $planKey === 'vip' ? 'Manage plan' : 'See plans' }}</a>
+        </div>
+    @endif
+
     @if ($properties->isEmpty())
         <div class="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500">
             You haven't added any properties yet.
@@ -30,7 +50,12 @@
                 <tbody class="divide-y divide-slate-100">
                     @foreach ($properties as $property)
                         <tr>
-                            <td class="px-4 py-3 font-medium text-slate-900">{{ $property->name }}</td>
+                            <td class="px-4 py-3 font-medium text-slate-900">
+                                {{ $property->name }}
+                                @if ($property->subscription_hidden)
+                                    <span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">Hidden: over plan limit</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-slate-600">{{ str($property->property_type)->replace('_', ' ')->title() }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $property->rental_spaces_count }}</td>
                             <td class="px-4 py-3">
