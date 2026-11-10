@@ -20,9 +20,10 @@
 </div>
 
 <div class="mt-4">
-    <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
-    <textarea name="description" rows="4"
+    <label for="property-terms-and-conditions" class="block text-sm font-medium text-slate-700 mb-1">Terms and Conditions</label>
+    <textarea id="property-terms-and-conditions" name="description" rows="4"
         class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">{{ old('description', $property->description ?? '') }}</textarea>
+    <p class="mt-1 text-xs text-slate-500">These terms will be shown to tenants on each room or unit details page.</p>
 </div>
 </section>
 

@@ -14,7 +14,10 @@ class RentalSpaceDetailsPageTest extends TestCase
 
     private function openSpace(array $overrides = []): RentalSpace
     {
-        $property = Property::factory()->create(['name' => 'CWD Dormitory']);
+        $property = Property::factory()->create([
+            'name' => 'CWD Dormitory',
+            'description' => 'No overnight guests. Rent is due on the first day of each month.',
+        ]);
 
         return RentalSpace::factory()->create($overrides + [
             'property_id' => $property->id,
@@ -44,6 +47,8 @@ class RentalSpaceDetailsPageTest extends TestCase
             ->assertSee('10:00 PM')
             ->assertSee('Water')
             ->assertSee('Wifi')
+            ->assertSee('Terms and Conditions')
+            ->assertSee('No overnight guests. Rent is due on the first day of each month.')
             ->assertSee('Request a Viewing')
             ->assertSee(route('tenant.viewings.store', $space->property), false)
             ->assertSee('name="rental_space_id" value="'.$space->id.'"', false)
