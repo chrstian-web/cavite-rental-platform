@@ -82,6 +82,8 @@
                 @endforeach
             </div>
 
+            {{-- Room details and owner terms --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {{-- Details list --}}
             <div class="bg-white border border-slate-200 rounded-xl p-5">
                 <h2 class="font-semibold text-slate-900 mb-3">Room details</h2>
@@ -118,13 +120,14 @@
                 </div>
             </div>
 
-            {{-- About the property --}}
+            {{-- Terms and conditions entered by the owner on the property form --}}
             @if ($property->description)
-                <div>
-                    <h2 class="font-semibold text-slate-900 mb-2">About {{ $property->name }}</h2>
+                <section class="bg-white border border-slate-200 rounded-xl p-5" aria-labelledby="terms-and-conditions-heading">
+                    <h2 id="terms-and-conditions-heading" class="font-semibold text-slate-900 mb-3">Terms and Conditions</h2>
                     <p class="text-sm text-slate-600 whitespace-pre-line">{{ $property->description }}</p>
-                </div>
+                </section>
             @endif
+            </div>
 
             @if (! empty($property->house_rules))
                 <div>
@@ -145,6 +148,7 @@
                 <dl class="mt-4 pt-4 border-t border-slate-100 space-y-2 text-sm">
                     <div class="flex justify-between"><dt class="text-slate-500">Security deposit</dt><dd class="text-slate-900">₱{{ number_format($space->security_deposit ?? 0) }}</dd></div>
                     <div class="flex justify-between"><dt class="text-slate-500">Advance payment</dt><dd class="text-slate-900">₱{{ number_format($space->advance_payment ?? 0) }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-500">Reservation fee</dt><dd class="text-slate-900">{{ (float) $space->property->reservation_fee > 0 ? '₱'.number_format((float) $space->property->reservation_fee, 2) : 'No reservation fee' }}</dd></div>
                 </dl>
 
                 <a href="{{ route('tenant.applications.create', $space) }}"

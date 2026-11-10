@@ -76,8 +76,9 @@
                     <div>
                         <label class="block text-xs text-slate-500 mb-1">Reservation fee (₱, required when approving)</label>
                         <input type="number" name="reservation_fee" min="0.01" max="99999999.99" step="0.01"
-                               value="{{ old('reservation_fee') }}"
+                               value="{{ old('reservation_fee', $application->reservation_fee ?? $application->property->reservation_fee) }}"
                                class="w-full rounded-lg border-slate-300 text-sm">
+                        <p class="text-xs text-slate-400 mt-1">Pre-filled from the property's reservation fee; you can adjust it before approving.</p>
                         @error('reservation_fee') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
@@ -149,7 +150,7 @@
                                 <div>
                                     <label class="block text-xs text-slate-500 mb-1">Reservation fee (₱)</label>
                                     <input type="number" name="reservation_fee" min="0.01" max="99999999.99" step="0.01" required
-                                           value="{{ old('reservation_fee', $application->reservation_fee) }}"
+                                           value="{{ old('reservation_fee', $application->reservation_fee ?? $application->property->reservation_fee) }}"
                                            class="w-full rounded-lg border-slate-300 text-sm">
                                 </div>
                                 <div>

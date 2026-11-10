@@ -23,6 +23,10 @@
         </div>
         <p class="text-xs text-slate-500 mt-2">Choose your method on the secure checkout page. Payment is confirmed by the provider.</p>
     </div>
+@elseif (config('services.payment_gateway') === 'fake' && app()->environment(['local', 'testing']))
+    <p class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+        Pay by GCash to the owner's number. You will see the number and enter the amount on the next screen; keep your receipt as proof of payment.
+    </p>
 @else
     <p class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
         Secure online payment is unavailable until PayMongo and its payment-confirmation webhook are configured.

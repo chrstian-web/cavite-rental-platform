@@ -25,6 +25,7 @@ class PropertyDetailResource extends JsonResource
             'contact_email' => $this->contact_email,
             'min_monthly_rent' => $this->min_monthly_rent ? (float) $this->min_monthly_rent : null,
             'max_monthly_rent' => $this->max_monthly_rent ? (float) $this->max_monthly_rent : null,
+            'reservation_fee' => $this->reservation_fee ? (float) $this->reservation_fee : null,
             'house_rules' => $this->house_rules ?? [],
             'availability_status' => $this->availability_status,
             'views_count' => $this->views_count,

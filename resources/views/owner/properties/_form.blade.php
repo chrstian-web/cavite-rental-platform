@@ -20,9 +20,10 @@
 </div>
 
 <div class="mt-4">
-    <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
-    <textarea name="description" rows="4"
+    <label for="property-terms-and-conditions" class="block text-sm font-medium text-slate-700 mb-1">Terms and Conditions</label>
+    <textarea id="property-terms-and-conditions" name="description" rows="4"
         class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">{{ old('description', $property->description ?? '') }}</textarea>
+    <p class="mt-1 text-xs text-slate-500">These terms will be shown to tenants on each room or unit details page.</p>
 </div>
 </section>
 
@@ -64,6 +65,21 @@
         <label class="block text-sm font-medium text-slate-700 mb-1">Max. monthly rent (₱)</label>
         <input type="number" step="0.01" name="max_monthly_rent" value="{{ old('max_monthly_rent', $property->max_monthly_rent ?? '') }}"
             class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Reservation fee (₱)</label>
+        <input type="number" step="0.01" min="0" name="reservation_fee" value="{{ old('reservation_fee', $property->reservation_fee ?? '') }}"
+            class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
+        <p class="text-xs text-slate-400 mt-1">Shown to renters. Pre-filled when you approve an application.</p>
+        @error('reservation_fee') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">GCash number (for payments)</label>
+        <input type="text" name="gcash_number" value="{{ old('gcash_number', $property->gcash_number ?? '') }}"
+            inputmode="numeric" maxlength="11" pattern="[0-9]{11}" placeholder="09171234567"
+            class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">
+        <p class="text-xs text-slate-400 mt-1">11 digits. Renters see this number when paying by GCash. Leave blank to use the contact number.</p>
+        @error('gcash_number') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
     </div>
 </div>
 </section>

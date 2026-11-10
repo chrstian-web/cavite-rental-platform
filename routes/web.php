@@ -135,6 +135,7 @@ Route::middleware('auth')->group(function () {
         Route::get('contracts/{contract}', [OwnerRentalContractController::class, 'show'])->name('contracts.show');
         Route::patch('contracts/{contract}/activate', [OwnerRentalContractController::class, 'activate'])->name('contracts.activate');
         Route::patch('contracts/{contract}/terminate', [OwnerRentalContractController::class, 'terminate'])->name('contracts.terminate');
+        Route::patch('contracts/{contract}/move-in-message', [OwnerRentalContractController::class, 'sendMoveInMessage'])->name('contracts.move-in-message');
         Route::get('contracts/{contract}/pdf', [OwnerRentalContractController::class, 'downloadPdf'])->name('contracts.pdf');
 
         // Payments (recorded against a contract)
@@ -197,6 +198,8 @@ Route::middleware('auth')->group(function () {
     // Private document download — authorized per-request, never a public URL
     // Local demo checkout used when PAYMENT_GATEWAY=fake (local/testing only; no real money).
     Route::get('fake-payments/{checkout}', [FakeCheckoutController::class, 'show'])->name('fake-checkout.show');
+    Route::post('fake-payments/{checkout}/continue', [FakeCheckoutController::class, 'continue'])->name('fake-checkout.continue');
+    Route::get('fake-payments/{checkout}/gcash', [FakeCheckoutController::class, 'gcash'])->name('fake-checkout.gcash');
     Route::post('fake-payments/{checkout}/pay', [FakeCheckoutController::class, 'pay'])->name('fake-checkout.pay');
     Route::post('fake-payments/{checkout}/cancel', [FakeCheckoutController::class, 'cancel'])->name('fake-checkout.cancel');
 

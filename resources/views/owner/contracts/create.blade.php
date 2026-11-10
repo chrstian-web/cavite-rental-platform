@@ -47,7 +47,8 @@
         <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Terms &amp; conditions</label>
             <textarea name="terms_and_conditions" rows="6" placeholder="House rules, penalties, renewal terms, etc."
-                class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">{{ old('terms_and_conditions') }}</textarea>
+                class="w-full rounded-lg border-slate-300 focus:ring-blue-500 focus:border-blue-500">{{ old('terms_and_conditions', $application->property->description) }}</textarea>
+            <p class="text-xs text-slate-400 mt-1">Pre-filled from the property's Terms and Conditions; you can edit it for this contract.</p>
         </div>
 
         <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg px-5 py-2.5">

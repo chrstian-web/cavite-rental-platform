@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\RentalApplication;
 use App\Models\Payment;
 use App\Models\RentalContract;
+use App\Models\RentalSpace;
 use App\Notifications\ContractActivatedNotification;
 use App\Notifications\DownPaymentRequestedNotification;
 use Illuminate\Support\Carbon;
@@ -118,18 +119,28 @@ class RentalContractService
         abort_unless(in_array($status, ['expired', 'terminated'], true), 422);
 
         return DB::transaction(function () use ($contract, $status) {
-            $wasActive = $contract->status === 'active';
-            $contract->update(['status' => $status]);
+            // Re-read under a lock so a double click or concurrent request cannot free the space twice.
+            $locked = RentalContract::whereKey($contract->id)->lockForUpdate()->firstOrFail();
+
+            if (in_array($locked->status, ['expired', 'terminated'], true)) {
+                return $locked;
+            }
+
+            $wasActive = $locked->status === 'active';
+            $locked->update(['status' => $status]);
 
             if ($wasActive) {
-                $space = $contract->rentalSpace;
-                $space->decrement('occupied_capacity');
-                if ($space->status === 'occupied') {
-                    $space->update(['status' => 'available']);
+                $space = RentalSpace::withTrashed()->whereKey($locked->rental_space_id)->lockForUpdate()->first();
+
+                if ($space) {
+                    $space->update(['occupied_capacity' => max(0, (int) $space->occupied_capacity - 1)]);
+                    if ($space->status === 'occupied') {
+                        $space->update(['status' => 'available']);
+                    }
                 }
             }
 
-            return $contract->fresh();
+            return $locked->fresh();
         });
     }
 }

@@ -13,6 +13,7 @@ class RentalContract extends Model
         'rental_application_id', 'user_id', 'owner_id', 'property_id', 'rental_space_id',
         'monthly_rent', 'security_deposit', 'advance_payment', 'start_date', 'end_date',
         'terms_and_conditions', 'contract_pdf_path', 'status',
+        'move_in_message', 'move_in_message_sent_at',
     ];
 
     protected function casts(): array
@@ -23,6 +24,7 @@ class RentalContract extends Model
             'advance_payment' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
+            'move_in_message_sent_at' => 'datetime',
         ];
     }
 

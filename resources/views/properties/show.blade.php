@@ -46,7 +46,7 @@
 
             @if ($property->description)
                 <div>
-                    <h2 class="font-semibold text-slate-900 mb-2">About this property</h2>
+                    <h2 class="font-semibold text-slate-900 mb-2">Terms and Conditions</h2>
                     <p class="text-sm text-slate-600 whitespace-pre-line">{{ $property->description }}</p>
                 </div>
             @endif

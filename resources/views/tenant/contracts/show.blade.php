@@ -51,6 +51,16 @@
             </div>
         @endif
 
+        @if (filled($contract->move_in_message))
+            <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                <p class="font-medium">Message from your owner before move-in</p>
+                <p class="mt-1 whitespace-pre-wrap">{{ $contract->move_in_message }}</p>
+                @if ($contract->move_in_message_sent_at)
+                    <p class="mt-2 text-xs text-blue-700">Sent {{ $contract->move_in_message_sent_at->format('M j, Y g:i A') }}</p>
+                @endif
+            </div>
+        @endif
+
         <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
             <a href="{{ route('tenant.contracts.pdf', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Download PDF</a>
             @if ($contract->status === 'active')

@@ -101,7 +101,8 @@ class Payment extends Model
 
     public function canBeSubmittedByTenant(): bool
     {
-        return $this->status === 'pending';
+        // Nothing new can be paid against a contract the owner has terminated (the owner can still record arrears).
+        return $this->status === 'pending' && $this->contract?->status !== 'terminated';
     }
 
     public function canBeReviewed(): bool

@@ -45,7 +45,7 @@
                         @include('partials.nav-dropdown', ['label' => 'My Rentals', 'links' => [
                             ['route' => 'tenant.applications.index', 'label' => 'My Applications', 'notifyTypes' => 'rental_application_status'],
                             ['route' => 'tenant.viewings.index', 'label' => 'My Viewings', 'notifyTypes' => 'viewing_request_status'],
-                            ['route' => 'tenant.contracts.index', 'label' => 'My Contracts', 'notifyTypes' => 'contract_activated'],
+                            ['route' => 'tenant.contracts.index', 'label' => 'My Contracts', 'notifyTypes' => ['contract_activated', 'move_in_message']],
                             ['route' => 'tenant.payments.index', 'label' => 'My Payments'],
                             ['route' => 'tenant.maintenance.index', 'label' => 'Maintenance', 'notifyTypes' => 'maintenance_request_status'],
                         ]])

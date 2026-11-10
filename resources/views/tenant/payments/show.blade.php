@@ -119,7 +119,7 @@
                         <form method="POST" action="{{ route('tenant.payments.pay-online', $payment) }}">
                             @csrf
                             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 text-sm font-medium">
-                                {{ config('services.payment_gateway') === 'fake' ? 'Open checkout' : 'Continue to secure checkout' }} · ₱{{ number_format($payment->amount, 2) }}
+                                {{ config('services.payment_gateway') === 'fake' ? 'Pay with GCash' : 'Continue to secure checkout' }} · ₱{{ number_format($payment->amount, 2) }}
                             </button>
                         </form>
                     @endif

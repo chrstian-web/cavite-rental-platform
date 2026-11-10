@@ -9,7 +9,7 @@
 
         <p class="text-3xl font-semibold text-slate-900 my-6">₱{{ number_format($payment->amount, 2) }}</p>
 
-        <form method="POST" action="{{ route('fake-checkout.pay', $checkout) }}" class="space-y-3">
+        <form method="POST" action="{{ route('fake-checkout.continue', $checkout) }}" class="space-y-3">
             @csrf
             <fieldset>
                 <legend class="mb-2 text-sm font-medium text-slate-700">Choose a payment method</legend>
