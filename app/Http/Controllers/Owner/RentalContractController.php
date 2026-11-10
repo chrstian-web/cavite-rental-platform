@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RentalContract\StoreRentalContractRequest;
 use App\Models\RentalApplication;
 use App\Models\RentalContract;
+use App\Notifications\MoveInMessageNotification;
 use App\Services\RentalContractService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -82,9 +83,38 @@ class RentalContractController extends Controller
         return back()->with('status', 'Contract activated. The unit is now marked occupied.');
     }
 
+    /**
+     * Final remarks from the owner, available once every payment is settled and before the lease ends.
+     */
+    public function sendMoveInMessage(Request $request, RentalContract $contract): RedirectResponse
+    {
+        $this->authorize('view', $contract);
+
+        abort_unless(in_array($contract->status, ['draft', 'active'], true), 422, 'A message can only be sent for a draft or active contract.');
+        abort_unless($contract->application?->hasPaidReservationFee() ?? true, 422, 'The reservation fee must be paid first.');
+        abort_unless($contract->hasSettledDownPayments(), 422, 'The message can be sent once all payments are made.');
+
+        $data = $request->validate([
+            'move_in_message' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $contract->update([
+            'move_in_message' => $data['move_in_message'],
+            'move_in_message_sent_at' => now(),
+        ]);
+
+        $contract->tenant->notify(new MoveInMessageNotification($contract->fresh(['property'])));
+
+        return back()->with('status', 'Your message was sent to the renter.');
+    }
+
     public function terminate(Request $request, RentalContract $contract): RedirectResponse
     {
         $this->authorize('view', $contract);
+
+        if ($contract->status !== 'active') {
+            return back()->withErrors(['terminate' => 'Only an active contract can be terminated.']);
+        }
 
         $this->contracts->end($contract, 'terminated');
 

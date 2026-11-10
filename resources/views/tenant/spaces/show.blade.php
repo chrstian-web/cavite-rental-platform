@@ -148,6 +148,7 @@
                 <dl class="mt-4 pt-4 border-t border-slate-100 space-y-2 text-sm">
                     <div class="flex justify-between"><dt class="text-slate-500">Security deposit</dt><dd class="text-slate-900">₱{{ number_format($space->security_deposit ?? 0) }}</dd></div>
                     <div class="flex justify-between"><dt class="text-slate-500">Advance payment</dt><dd class="text-slate-900">₱{{ number_format($space->advance_payment ?? 0) }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-500">Reservation fee</dt><dd class="text-slate-900">{{ (float) $space->property->reservation_fee > 0 ? '₱'.number_format((float) $space->property->reservation_fee, 2) : 'No reservation fee' }}</dd></div>
                 </dl>
 
                 <a href="{{ route('tenant.applications.create', $space) }}"

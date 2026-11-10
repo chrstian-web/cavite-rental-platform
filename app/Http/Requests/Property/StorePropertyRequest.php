@@ -27,6 +27,8 @@ class StorePropertyRequest extends FormRequest
             'contact_email' => ['nullable', 'email', 'max:150'],
             'min_monthly_rent' => ['nullable', 'numeric', 'min:0'],
             'max_monthly_rent' => ['nullable', 'numeric', 'min:0', 'gte:min_monthly_rent'],
+            'reservation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'gcash_number' => ['nullable', 'digits:11'],
             'house_rules' => ['nullable', 'array'],
             'house_rules.*' => ['string', 'max:255'],
             'amenities' => ['nullable', 'array'],

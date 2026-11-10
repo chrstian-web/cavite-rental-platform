@@ -42,6 +42,10 @@
             'Your maintenance request is now '.str($data['status'])->replace('_', ' '),
             route('tenant.maintenance.index'),
         ],
+        'move_in_message' => [
+            "Your owner sent a message before move-in ({$data['property_name']})",
+            route('tenant.contracts.show', $data['contract_id']),
+        ],
         'contract_activated' => [
             "Your contract for {$data['property_name']} is now active",
             route('tenant.contracts.show', $data['contract_id']),

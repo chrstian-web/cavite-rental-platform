@@ -197,6 +197,11 @@ class NotificationAlertService
                 array_filter([$status ? ['text' => $status, 'tone' => $tone] : null]),
                 route('tenant.maintenance.index'), 'View', $isGood ? 'success' : 'info',
             ],
+            'move_in_message' => [
+                'Contract', 'Your owner sent a message before move-in', $property,
+                [['text' => 'New message', 'tone' => 'info']],
+                route('tenant.contracts.show', $d['contract_id']), 'Read', 'info',
+            ],
             'contract_activated' => [
                 'Contract', 'Your contract is now active', $property,
                 [['text' => 'Active', 'tone' => 'ok']],

@@ -18,7 +18,7 @@ class Property extends Model
         'owner_id', 'location_id', 'barangay_id', 'name', 'slug', 'property_type',
         'description', 'address_line', 'latitude', 'longitude',
         'contact_person', 'contact_number', 'contact_email',
-        'min_monthly_rent', 'max_monthly_rent', 'house_rules',
+        'min_monthly_rent', 'max_monthly_rent', 'reservation_fee', 'gcash_number', 'house_rules',
         'availability_status', 'verification_status', 'views_count', 'is_featured',
     ];
 
@@ -30,6 +30,7 @@ class Property extends Model
             'longitude' => 'decimal:7',
             'min_monthly_rent' => 'decimal:2',
             'max_monthly_rent' => 'decimal:2',
+            'reservation_fee' => 'decimal:2',
             'is_featured' => 'boolean',
         ];
     }

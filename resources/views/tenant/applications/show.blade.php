@@ -62,6 +62,16 @@
                             Reservation fee paid and confirmed by the payment provider. The owner has been notified and can proceed with the rental contract.
                         </p>
                     @endif
+                    @if ($application->reservationFeePayment->receipt_number)
+                        <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                            <p class="font-medium text-slate-900">Receipt {{ $application->reservationFeePayment->receipt_number }}</p>
+                            <p class="mt-1">Please download and keep this receipt as your proof of payment. You can send it to the property owner to confirm your reservation.</p>
+                            <a href="{{ route('tenant.payments.receipt', $application->reservationFeePayment) }}"
+                               class="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                                Download receipt (PDF)
+                            </a>
+                        </div>
+                    @endif
                 @else
                     @if ($application->reservationFeePayment?->status === 'pending')
                         <p class="mt-4 text-sm text-amber-700">Reservation fee payment is awaiting confirmation. Do not pay again if your provider is still processing it.</p>

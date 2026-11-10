@@ -27,12 +27,56 @@ class FakeCheckoutController extends Controller
         return view('tenant.payments.fake-checkout', compact('payment', 'checkout'));
     }
 
+    /**
+     * "Complete payment" on the checkout page. GCash goes on to the GCash screen,
+     * where the owner's number is shown; other methods are recorded straight away.
+     */
+    public function continue(Request $request, string $checkout): RedirectResponse
+    {
+        $this->findPayment($checkout);
+        $data = $request->validate([
+            'payment_method' => ['required', 'in:gcash,bank_transfer'],
+        ]);
+
+        if ($data['payment_method'] === 'gcash') {
+            return redirect()->route('fake-checkout.gcash', $checkout);
+        }
+
+        return $this->pay($request, $checkout);
+    }
+
+    public function gcash(string $checkout): View|RedirectResponse
+    {
+        $payment = $this->findPayment($checkout);
+        $payment->load(['contract.property', 'application.property']);
+        $property = $payment->application?->property ?? $payment->contract?->property;
+        $recipientNumber = $property?->gcash_number ?: $property?->contact_number;
+
+        if (blank($recipientNumber)) {
+            return redirect()->route('fake-checkout.show', $checkout)
+                ->withErrors(['payment_method' => 'The owner has not added a GCash number yet. Please contact the owner or choose another method.']);
+        }
+
+        return view('tenant.payments.fake-gcash', [
+            'payment' => $payment,
+            'property' => $property,
+            'checkout' => $checkout,
+            'recipientNumber' => $recipientNumber,
+        ]);
+    }
+
     public function pay(Request $request, string $checkout): RedirectResponse
     {
         $payment = $this->findPayment($checkout);
         $data = $request->validate([
             'payment_method' => ['required', 'in:gcash,bank_transfer'],
+            'amount' => ['nullable', 'numeric'],
         ]);
+
+        // The GCash screen asks the renter to type the amount they are sending; it must match what is due.
+        if (isset($data['amount']) && abs((float) $data['amount'] - (float) $payment->amount) > 0.009) {
+            return back()->withInput()->withErrors(['amount' => 'Enter the exact amount due: ₱'.number_format((float) $payment->amount, 2).'.']);
+        }
 
         PaymentEvent::create([
             'payment_id' => $payment->id,

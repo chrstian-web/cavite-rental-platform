@@ -26,6 +26,8 @@ class RentalApplicationService
                 'property_id' => $space->property_id,
                 'rental_space_id' => $space->id,
                 'status' => 'pending',
+                // Snapshot of the property's reservation fee, so later changes to the listing don't alter this application.
+                'reservation_fee' => $space->property->reservation_fee,
             ]);
 
             foreach (array_filter($documents) as $type => $file) {

@@ -43,6 +43,28 @@
                 </div>
             @endif
 
+            @if ($downPaymentSettled && in_array($contract->status, ['draft', 'active'], true))
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-700 mb-1">Final remarks for the renter</h2>
+                    <p class="text-xs text-slate-500 mb-3">All payments are settled. Share anything the renter should know before moving in, such as key pickup, move-in time or house reminders.</p>
+
+                    @if ($contract->move_in_message_sent_at)
+                        <p class="mb-3 text-xs text-green-700">Sent {{ $contract->move_in_message_sent_at->format('M j, Y g:i A') }}. You can edit and send it again.</p>
+                    @endif
+
+                    <form method="POST" action="{{ route('owner.contracts.move-in-message', $contract) }}" class="space-y-3">
+                        @csrf @method('PATCH')
+                        <textarea name="move_in_message" rows="4" maxlength="2000" required
+                                  placeholder="e.g. Keys are ready for pickup at the front desk on your move-in date."
+                                  class="w-full rounded-lg border-slate-300 text-sm">{{ old('move_in_message', $contract->move_in_message) }}</textarea>
+                        @error('move_in_message') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+                        <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            {{ $contract->move_in_message_sent_at ? 'Send updated message' : 'Send message to renter' }}
+                        </button>
+                    </form>
+                </div>
+            @endif
+
             <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
                 <a href="{{ route('owner.contracts.pdf', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Download PDF</a>
                 @if ($contract->status === 'draft')
