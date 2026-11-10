@@ -24,10 +24,11 @@ class RentalContractController extends Controller
 
         $contracts = RentalContract::query()
             ->with(['property', 'rentalSpace', 'tenant'])
-            ->when($user->isOwner(), fn ($q) => $q->where('owner_id', $user->id))
             ->when($user->isManager(), fn ($q) => $q->whereHas('property.managers', fn ($q2) => $q2->where('users.id', $user->id)))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return view('owner.contracts.index', compact('contracts'));
     }
