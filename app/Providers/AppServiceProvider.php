@@ -19,16 +19,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        //
-    }
-
     public function boot(): void
     {
+        // Railway handles https for us; make every link and form use https.
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         // public/storage is git-ignored, so a fresh deploy (Railway, etc.) has no link and
         // uploaded property images would 404. Create it once if it is missing.
         if ($this->app->environment('production') && ! file_exists(public_path('storage'))) {
