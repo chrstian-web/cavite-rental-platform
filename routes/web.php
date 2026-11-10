@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DssController;
+use App\Http\Controllers\Admin\ActivityArchiveController;
 use App\Http\Controllers\Admin\OwnerVerificationController as AdminOwnerVerificationController;
 use App\Http\Controllers\Admin\PropertyController as AdminPropertyController;
 use App\Http\Controllers\Admin\ReportController;
@@ -210,6 +211,10 @@ Route::middleware('auth')->group(function () {
 
     // Super Admin
     Route::middleware('role:super_admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('activity/archive', [ActivityArchiveController::class, 'index'])->name('activity.archive.index');
+        Route::patch('activity/{type}/{activityId}/archive', [ActivityArchiveController::class, 'archive'])->name('activity.archive');
+        Route::delete('activity/{type}/{activityId}/archive', [ActivityArchiveController::class, 'restore'])->name('activity.restore');
+
         Route::get('properties', [AdminPropertyController::class, 'index'])->name('properties.index');
         Route::patch('properties/{property}/verify', [AdminPropertyController::class, 'verify'])->name('properties.verify');
 
