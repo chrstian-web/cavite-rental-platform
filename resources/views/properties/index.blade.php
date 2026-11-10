@@ -9,6 +9,16 @@
         <p class="text-slate-600 mt-3 max-w-2xl">Browse verified condominiums, boarding houses, and dormitories across the province — then compare your favorites with confidence.</p>
     </div>
 
+    @if ($nearbySearch)
+        <section class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4" aria-live="polite">
+            <p class="text-sm text-blue-900">Showing available properties matching <strong>{{ $nearbySearch['location'] }}</strong>.</p>
+            <form method="POST" action="{{ route('properties.nearby.clear') }}">
+                @csrf
+                <button type="submit" class="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-100">Clear location</button>
+            </form>
+        </section>
+    @endif
+
     <!-- Layout Container -->
     <div class="lg:grid lg:grid-cols-4 lg:gap-8 items-start">
 
@@ -21,6 +31,12 @@
                 </div>
 
                 <form method="GET" action="{{ url()->current() }}" class="space-y-4">
+                    @if ($nearbySearch)
+                        <input type="hidden" name="nearby" value="1">
+                    @endif
+                    @if (request('q'))
+                        <input type="hidden" name="q" value="{{ request('q') }}">
+                    @endif
                     <!-- Property Type -->
                     <div>
                         <label class="block text-xs font-medium text-slate-600 mb-1">Property Type</label>
@@ -83,8 +99,14 @@
                     <svg class="mx-auto h-10 w-10 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    <p class="font-medium text-slate-700">No properties match your search yet.</p>
-                    <p class="text-xs text-slate-400 mt-1">Try adjusting or resetting your filter options.</p>
+                    <p class="font-medium text-slate-700">
+                        @if ($nearbySearch)
+                            No available properties match your entered location and filters yet.
+                        @else
+                            No properties match your search yet.
+                        @endif
+                    </p>
+                    <p class="text-xs text-slate-400 mt-1">Try another location or adjust your filters.</p>
                 </div>
             @else
                 <!-- Tenant Property Comparison Action Bar -->
@@ -103,7 +125,7 @@
 
                 <!-- Grid Listing -->
                 <div class="flex items-center justify-between mb-4">
-                    <p class="text-sm text-slate-500"><span class="font-bold text-slate-900">{{ $properties->total() }}</span> homes available</p>
+                    <p class="text-sm text-slate-500"><span class="font-bold text-slate-900">{{ $properties->total() }}</span> homes {{ $nearbySearch ? 'matching your location' : 'available' }}</p>
                     <span class="hidden sm:inline text-xs text-slate-400">Updated listings from across Cavite</span>
                 </div>
 
@@ -138,7 +160,6 @@
 
                                     <h3 class="font-semibold text-slate-900 mt-2 truncate text-base">{{ $property->name }}</h3>
                                     <p class="text-xs text-slate-500 mt-0.5">📍 {{ $property->location->city_municipality }}, Cavite</p>
-
                                     <p class="text-sm font-extrabold text-slate-900 mt-3">
                                         @if ($property->min_monthly_rent)
                                             ₱{{ number_format($property->min_monthly_rent) }}

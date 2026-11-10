@@ -172,7 +172,7 @@
         @yield('content')
     </main>
 
-    @if (auth()->check() && auth()->user()->isTenant())
+    @if (auth()->check() && auth()->user()->isTenant() && ! request()->routeIs('properties.index'))
         @include('partials.onboarding-guide')
     @endif
 

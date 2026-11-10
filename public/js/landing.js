@@ -162,7 +162,13 @@
         select(cities[0]);
 
         card.classList.add('is-live');
-        requestAnimationFrame(() => map.invalidateSize());
+        const invalidateMapSize = () => requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+        if ('ResizeObserver' in window) {
+            new ResizeObserver(invalidateMapSize).observe(mapEl);
+        } else {
+            window.addEventListener('resize', invalidateMapSize, { passive: true });
+        }
+        invalidateMapSize();
     };
 
     // Start after the page has loaded and the browser is idle, so the hero text paints first.

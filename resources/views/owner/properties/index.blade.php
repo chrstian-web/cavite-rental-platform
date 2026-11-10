@@ -30,7 +30,9 @@
                 <tbody class="divide-y divide-slate-100">
                     @foreach ($properties as $property)
                         <tr>
-                            <td class="px-4 py-3 font-medium text-slate-900">{{ $property->name }}</td>
+                            <td class="px-4 py-3 font-medium text-slate-900">
+                                {{ $property->name }}
+                            </td>
                             <td class="px-4 py-3 text-slate-600">{{ str($property->property_type)->replace('_', ' ')->title() }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $property->rental_spaces_count }}</td>
                             <td class="px-4 py-3">

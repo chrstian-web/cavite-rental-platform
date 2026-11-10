@@ -35,12 +35,12 @@
     @php
         $dashboardStats = [
             ['label' => 'Properties', 'value' => $totalProperties, 'href' => route('owner.properties.index')],
-            ['label' => 'Total Units', 'value' => $totalUnits, 'href' => route('owner.properties.index')],
-            ['label' => 'Available Units', 'value' => $availableUnits, 'href' => route('owner.properties.index')],
-            ['label' => 'Occupied Units', 'value' => $occupiedUnits, 'href' => route('owner.properties.index')],
+            ['label' => 'Total Units', 'value' => $totalUnits, 'href' => $unitsUrl],
+            ['label' => 'Available Units', 'value' => $availableUnits, 'href' => $unitsUrl],
+            ['label' => 'Occupied Units', 'value' => $occupiedUnits, 'href' => $unitsUrl],
             ['label' => 'Pending Applications', 'value' => $pendingApplications, 'href' => route('owner.applications.index', ['status' => 'pending'])],
-            ['label' => 'Active Tenants', 'value' => $activeTenants, 'href' => route('owner.contracts.index')],
-            ['label' => 'Pending Maintenance', 'value' => $pendingMaintenance, 'href' => route('owner.maintenance.index')],
+            ['label' => 'Active Tenants', 'value' => $activeTenants, 'href' => route('owner.contracts.index', ['status' => 'active'])],
+            ['label' => 'Pending Maintenance', 'value' => $pendingMaintenance, 'href' => route('owner.maintenance.index', ['status' => 'open'])],
             ['label' => 'Total Property Views', 'value' => $totalViews, 'href' => route('owner.properties.index')],
         ];
     @endphp

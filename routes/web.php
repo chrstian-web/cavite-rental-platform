@@ -36,6 +36,7 @@ use App\Http\Controllers\Tenant\PaymentController as TenantPaymentController;
 use App\Http\Controllers\Tenant\RecommendationController;
 use App\Http\Controllers\Tenant\ReservationFeeController;
 use App\Http\Controllers\Tenant\RentalApplicationController as TenantRentalApplicationController;
+use App\Http\Controllers\Tenant\RentalSpaceController as TenantRentalSpaceController;
 use App\Http\Controllers\Tenant\RentalContractController as TenantRentalContractController;
 use App\Http\Controllers\Tenant\ReviewController as TenantReviewController;
 use App\Http\Controllers\Tenant\ViewingRequestController as TenantViewingRequestController;
@@ -51,6 +52,8 @@ Route::get('/', function () {
 Route::get('/properties', [PublicPropertyController::class, 'index'])->name('properties.index');
 // Must stay above the {slug} route, or "count" would be read as a property slug.
 Route::get('/properties/count', [PublicPropertyController::class, 'count'])->middleware('throttle:60,1')->name('properties.count');
+Route::post('/properties/nearby', [PublicPropertyController::class, 'startNearby'])->name('properties.nearby');
+Route::post('/properties/nearby/clear', [PublicPropertyController::class, 'clearNearby'])->name('properties.nearby.clear');
 Route::get('/properties/{slug}', [PublicPropertyController::class, 'show'])->name('properties.show');
 Route::get('/properties/{property}/virtual-tour/{tour}/scenes/{scene}/panorama', [PublicPropertyController::class, 'panorama'])
     ->name('virtual-tour.panorama');
@@ -155,6 +158,8 @@ Route::middleware('auth')->group(function () {
         Route::get('applications', [TenantRentalApplicationController::class, 'index'])->name('applications.index');
         Route::get('applications/{application}', [TenantRentalApplicationController::class, 'show'])->name('applications.show');
         Route::post('applications/{application}/reservation-fee', [ReservationFeeController::class, 'pay'])->name('applications.reservation-fee.pay');
+        // Room details (+ viewing request + map): where the "Apply" button on a listing leads
+        Route::get('rental-spaces/{space}', [TenantRentalSpaceController::class, 'show'])->name('spaces.show');
         Route::get('rental-spaces/{space}/apply', [TenantRentalApplicationController::class, 'create'])->name('applications.create');
         Route::post('rental-spaces/{space}/apply', [TenantRentalApplicationController::class, 'store'])->name('applications.store');
 
@@ -207,6 +212,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:owner')->prefix('owner')->name('owner.')->group(function () {
         Route::get('verification', [OwnerVerificationController::class, 'show'])->name('verification.show');
         Route::post('verification', [OwnerVerificationController::class, 'store'])->name('verification.store');
+
     });
 
     // Super Admin

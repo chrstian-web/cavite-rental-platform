@@ -8,8 +8,9 @@ use App\Models\Property;
 use App\Models\SearchLog;
 use App\Models\VirtualTour;
 use App\Models\VirtualTourScene;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -22,35 +23,78 @@ class PropertyController extends Controller
     {
         $this->logSearch($request);
 
-        $sort = $this->resolveSort($request);
+        $nearbySearch = null;
+        if ($request->boolean('nearby')) {
+            $manualLocation = trim($request->string('location')->toString());
+            $nearbySearch = $manualLocation !== ''
+                ? ['location' => $manualLocation]
+                : $request->session()->get('nearby_search');
 
-        $properties = $this->applyPropertySort(
-            $this->applyPropertyFilters(
-                $this->baseVerifiedAvailableQuery()
-                    ->with(['images' => fn ($q) => $q->where('is_cover', true), 'location'])
-                    ->withCount('rentalSpaces')
-                    ->withAvg('reviews', 'rating'),
-                $request
-            ),
-            $sort
-        )
+            if (is_array($nearbySearch) && isset($nearbySearch['location'])) {
+                $request->session()->put('nearby_search', $nearbySearch);
+            }
+        }
+        if (! is_array($nearbySearch) || ! isset($nearbySearch['location'])) {
+            $nearbySearch = null;
+        }
+
+        $sort = $this->resolveSort($request);
+        $query = $this->applyPropertyFilters(
+            $this->baseVerifiedAvailableQuery()
+                ->with(['images' => fn ($q) => $q->where('is_cover', true), 'location'])
+                ->withCount('rentalSpaces')
+                ->withAvg('reviews', 'rating'),
+            $request
+        );
+        if ($nearbySearch) {
+            $query = $this->applyNearbyFilter($query, $nearbySearch['location']);
+        }
+        $query = $this->applyPropertySort($query, $sort);
+        $properties = $query
             ->paginate(12)
             ->withQueryString();
 
         $locations = $this->activeLocations();
 
-        return view('properties.index', compact('properties', 'locations', 'sort'));
+        return view('properties.index', compact('properties', 'locations', 'sort', 'nearbySearch'));
     }
 
-    /**
-     * Live result count for the landing-page search. Same filters as index(),
-     * but it is not logged as a search: it fires while the visitor is still choosing.
-     */
-    public function count(Request $request): JsonResponse
+    public function startNearby(Request $request): RedirectResponse
     {
-        $count = $this->applyPropertyFilters($this->baseVerifiedAvailableQuery(), $request)->count();
+        $data = $request->validate([
+            'location' => ['required', 'string', 'min:2', 'max:120'],
+        ]);
 
-        return response()->json(['count' => $count]);
+        $request->session()->put('nearby_search', [
+            'location' => trim($data['location']),
+        ]);
+
+        return redirect()->route('properties.index', ['nearby' => 1]);
+    }
+
+    public function clearNearby(Request $request): RedirectResponse
+    {
+        $request->session()->forget('nearby_search');
+
+        return redirect()->route('properties.index');
+    }
+
+    /** Match a manually entered area to listing city, barangay, or street address. */
+    private function applyNearbyFilter(Builder $query, string $location): Builder
+    {
+        return $query
+            ->where(function ($matches) use ($location) {
+                $terms = array_values(array_filter(array_map('trim', preg_split('/[,;]+/', $location) ?: [])));
+                foreach ($terms as $index => $term) {
+                    $pattern = '%'.$term.'%';
+                    $matchTerm = function ($clause) use ($pattern): void {
+                        $clause->where('properties.address_line', 'like', $pattern)
+                            ->orWhereHas('location', fn ($city) => $city->where('city_municipality', 'like', $pattern))
+                            ->orWhereHas('barangay', fn ($barangay) => $barangay->where('name', 'like', $pattern));
+                    };
+                    $index === 0 ? $matchTerm($matches) : $matches->orWhere($matchTerm);
+                }
+            });
     }
 
     /**
@@ -59,7 +103,12 @@ class PropertyController extends Controller
      */
     protected function logSearch(Request $request): void
     {
-        $hasFilter = $request->filled('location_id') || $request->filled('type')
+        // Keep manually entered nearby locations out of search/IP analytics.
+        if ($request->boolean('nearby')) {
+            return;
+        }
+
+        $hasFilter = $request->filled('q') || $request->filled('location_id') || $request->filled('type')
             || $request->filled('min_rent') || $request->filled('max_rent');
 
         if (! $hasFilter) {
@@ -80,8 +129,7 @@ class PropertyController extends Controller
         $property = Property::query()
             ->with([
                 'images', 'amenities', 'owner', 'location', 'barangay',
-                'rentalSpaces' => fn ($q) => $q->orderBy('space_number')
-                    ->withCount(['rentalContracts as active_contracts_count' => fn ($c) => $c->where('status', 'active')]),
+                'rentalSpaces' => fn ($q) => $q->orderBy('space_number'),
                 'rentalSpaces.images',
                 'virtualTour.scenes.hotspots',
             ])

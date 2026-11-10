@@ -63,7 +63,9 @@
             </div>
 
             <div class="flex items-center gap-2.5 sm:gap-4">
-                @include('partials.nav-search')
+                @unless (request()->routeIs('dashboard') && auth()->user()->isTenant())
+                    @include('partials.nav-search')
+                @endunless
                 @include('partials.notification-bell')
                 @include('partials.profile-dropdown')
 

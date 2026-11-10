@@ -94,11 +94,11 @@
                 </form>
             @endif
 
-            @if ($contract->payments->isEmpty())
+            @if ($contract->paymentHistory()->isEmpty())
                 <p class="text-xs text-slate-400">No payments recorded yet.</p>
             @else
                 <ul class="text-xs space-y-2">
-                    @foreach ($contract->payments as $payment)
+                    @foreach ($contract->paymentHistory() as $payment)
                         <li class="border-b border-slate-100 pb-2">
                             <div class="flex items-center justify-between">
                                 <a href="{{ route('owner.payments.show', $payment) }}" class="hover:underline">

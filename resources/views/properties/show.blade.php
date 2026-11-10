@@ -115,7 +115,7 @@
                                     @if ($space->acceptsApplications())
                                         @auth
                                             @if (auth()->user()->isTenant())
-                                                <x-apply-button :href="route('tenant.applications.create', $space)" />
+                                                <x-apply-button :href="route('tenant.spaces.show', $space)" />
                                             @endif
                                         @else
                                             <x-apply-button :href="route('login')" />

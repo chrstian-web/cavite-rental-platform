@@ -23,6 +23,21 @@ trait FiltersAndSortsProperties
     protected function applyPropertyFilters(Builder $query, Request $request): Builder
     {
         return $query
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $term = trim($request->string('q')->toString());
+
+                if ($term === '') {
+                    return $q;
+                }
+
+                return $q->where(function ($search) use ($term) {
+                    $search->where('name', 'like', "%{$term}%")
+                        ->orWhere('address_line', 'like', "%{$term}%")
+                        ->orWhereHas('location', fn ($location) => $location
+                            ->where('city_municipality', 'like', "%{$term}%")
+                            ->orWhere('province', 'like', "%{$term}%"));
+                });
+            })
             ->when($request->filled('type'), fn ($q) => $q->ofType($request->string('type')))
             ->when($request->filled('location_id'), fn ($q) => $q->inLocation((int) $request->integer('location_id')))
             ->when(

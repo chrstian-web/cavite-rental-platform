@@ -45,7 +45,7 @@ class SharedRoomCapacityTest extends TestCase
             ->assertOk()
             ->assertSee('1/8 taken')
             ->assertSee('7 left')
-            ->assertSee(route('tenant.applications.create', $space), false)
+            ->assertSee(route('tenant.spaces.show', $space), false)
             ->assertDontSee('Full');
     }
 
@@ -58,7 +58,7 @@ class SharedRoomCapacityTest extends TestCase
         $this->actingAs($tenant)->get(route('properties.show', $property->slug))
             ->assertOk()
             ->assertSee('2/2 taken')
-            ->assertDontSee(route('tenant.applications.create', $space), false);
+            ->assertDontSee(route('tenant.spaces.show', $space), false);
     }
 
     public function test_a_full_room_cannot_be_applied_to_through_a_direct_link(): void
