@@ -26,10 +26,8 @@ class RentalContractController extends Controller
             ->with(['property', 'rentalSpace', 'tenant'])
             ->when($user->isOwner(), fn ($q) => $q->where('owner_id', $user->id))
             ->when($user->isManager(), fn ($q) => $q->whereHas('property.managers', fn ($q2) => $q2->where('users.id', $user->id)))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
-            ->paginate(10)
-            ->withQueryString();
+            ->paginate(10);
 
         return view('owner.contracts.index', compact('contracts'));
     }
@@ -64,7 +62,7 @@ class RentalContractController extends Controller
             $this->contracts->ensureDownPayments($contract);
         }
 
-        $contract->load(['tenant', 'property', 'rentalSpace', 'payments', 'application.reservationFeePayment']);
+        $contract->load(['tenant', 'property', 'rentalSpace', 'payments']);
 
         return view('owner.contracts.show', compact('contract'));
     }

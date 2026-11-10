@@ -35,26 +35,20 @@
                     @endif
                 </dl>
 
-                @unless ($payment->proof_path)
-                    <p class="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400">No proof file was attached to this submission.</p>
-                @endunless
-
-                @php($proofItems = \App\Support\DocumentViewerItems::fromPayment($payment))
-                @if ($proofItems !== [] || $payment->status === 'paid')
-                    <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
-                        @if ($proofItems !== [])
-                            {{-- Opens the in-page viewer. Without JavaScript it still works as a normal link (new tab). --}}
-                            <a href="{{ route('payments.proof.view', $payment) }}" target="_blank" rel="noopener"
-                               x-data @click.prevent="$dispatch('open-docs', { id: 'payment-proof', index: 0 })"
-                               class="inline-flex min-h-[44px] items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">View submitted proof of payment</a>
-                        @endif
-                        @if ($payment->status === 'paid')
-                            <a href="{{ route('owner.payments.receipt', $payment) }}" class="inline-flex min-h-[44px] items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Download receipt (PDF)</a>
-                        @endif
+                @if ($payment->proof_path)
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <a href="{{ route('payments.proof.view', $payment) }}" target="_blank" rel="noopener" class="text-sm text-blue-600 hover:underline">
+                            View submitted proof of payment
+                        </a>
                     </div>
-                    @if ($proofItems !== [])
-                        @include('partials.document-viewer', ['items' => $proofItems, 'id' => 'payment-proof', 'title' => 'Proof of payment', 'trigger' => false])
-                    @endif
+                @else
+                    <p class="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400">No proof file was attached to this submission.</p>
+                @endif
+
+                @if ($payment->status === 'paid')
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <a href="{{ route('owner.payments.receipt', $payment) }}" class="text-sm text-blue-600 hover:underline">Download receipt (PDF)</a>
+                    </div>
                 @endif
             </div>
 

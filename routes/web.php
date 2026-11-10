@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DssController;
+use App\Http\Controllers\Admin\ActivityArchiveController;
 use App\Http\Controllers\Admin\OwnerVerificationController as AdminOwnerVerificationController;
 use App\Http\Controllers\Admin\PropertyController as AdminPropertyController;
 use App\Http\Controllers\Admin\ReportController;
@@ -88,6 +89,8 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('properties/{property}/images/{image}', [PropertyImageController::class, 'destroy'])
             ->name('properties.images.destroy');
+        Route::patch('properties/{property}/images/{image}', [PropertyImageController::class, 'update'])
+            ->name('properties.images.update');
         Route::patch('properties/{property}/images/{image}/cover', [PropertyImageController::class, 'makeCover'])
             ->name('properties.images.cover');
 
@@ -98,6 +101,7 @@ Route::middleware('auth')->group(function () {
         Route::put('properties/{property}/spaces/{space}', [RentalSpaceController::class, 'update'])->name('properties.spaces.update');
         Route::delete('properties/{property}/spaces/{space}', [RentalSpaceController::class, 'destroy'])->name('properties.spaces.destroy');
         Route::delete('properties/{property}/spaces/{space}/images/{image}', [RentalSpaceImageController::class, 'destroy'])->name('properties.spaces.images.destroy');
+        Route::patch('properties/{property}/spaces/{space}/images/{image}', [RentalSpaceImageController::class, 'update'])->name('properties.spaces.images.update');
         Route::patch('properties/{property}/spaces/{space}/images/{image}/cover', [RentalSpaceImageController::class, 'makeCover'])->name('properties.spaces.images.cover');
 
         // Virtual tour management
@@ -207,6 +211,10 @@ Route::middleware('auth')->group(function () {
 
     // Super Admin
     Route::middleware('role:super_admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('activity/archive', [ActivityArchiveController::class, 'index'])->name('activity.archive.index');
+        Route::patch('activity/{type}/{activityId}/archive', [ActivityArchiveController::class, 'archive'])->name('activity.archive');
+        Route::delete('activity/{type}/{activityId}/archive', [ActivityArchiveController::class, 'restore'])->name('activity.restore');
+
         Route::get('properties', [AdminPropertyController::class, 'index'])->name('properties.index');
         Route::patch('properties/{property}/verify', [AdminPropertyController::class, 'verify'])->name('properties.verify');
 

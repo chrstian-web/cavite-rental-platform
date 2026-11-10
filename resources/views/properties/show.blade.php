@@ -241,7 +241,7 @@
 
                 <div class="mt-3 flex items-center justify-between gap-3">
                     <p class="text-xs text-slate-500 truncate">{{ $property->barangay?->name }}, {{ $property->location->city_municipality }}</p>
-                    <a href="{{ $mapOpenUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">
+                    <a href="{{ $mapOpenUrl }}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-xs font-semibold text-blue-600 hover:underline">
                         Open in Google Maps
                     </a>
                 </div>

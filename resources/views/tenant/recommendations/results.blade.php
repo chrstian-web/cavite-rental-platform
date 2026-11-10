@@ -5,7 +5,7 @@
 @section('content')
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-xl font-semibold text-slate-900">Your Recommendations</h1>
-        <a href="{{ route('tenant.recommendations.create') }}" class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Adjust preferences</a>
+        <a href="{{ route('tenant.recommendations.create') }}" class="text-sm text-blue-600 hover:underline">Adjust preferences</a>
     </div>
 
     @if ($results->isEmpty())

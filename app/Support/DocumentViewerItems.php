@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Models\Payment;
 use Illuminate\Support\Collection;
 
 /**
@@ -45,23 +44,6 @@ class DocumentViewerItems
                 'download' => route('verification-documents.download', $doc),
             ];
         })->values()->all();
-    }
-
-    /** A payment has at most one proof file (JPG, PNG or PDF); returns [] when none was attached. */
-    public static function fromPayment(Payment $payment): array
-    {
-        if (! $payment->proof_path) {
-            return [];
-        }
-
-        return [[
-            'label' => 'Proof of payment',
-            'name' => $payment->proof_original_filename,
-            'meta' => $payment->reference_number ? 'Ref # '.$payment->reference_number : null,
-            'kind' => self::kind($payment->proof_original_filename ?: $payment->proof_path, null),
-            'src' => route('payments.proof.view', $payment),
-            'download' => route('payments.proof.download', $payment),
-        ]];
     }
 
     private static function kind(?string $filename, ?string $mime): string

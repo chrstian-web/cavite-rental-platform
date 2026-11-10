@@ -5,15 +5,6 @@
 @section('content')
     <h1 class="text-xl font-semibold text-slate-900 mb-6">Rental Contracts</h1>
 
-    <form method="GET" class="mb-4">
-        <select name="status" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm">
-            <option value="">All statuses</option>
-            @foreach (['draft', 'active', 'terminated', 'expired'] as $status)
-                <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->title() }}</option>
-            @endforeach
-        </select>
-    </form>
-
     @if ($contracts->isEmpty())
         <div class="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500">
             No contracts yet — create one from an approved application.

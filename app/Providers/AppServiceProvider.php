@@ -18,7 +18,6 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,12 +29,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Railway terminates HTTPS and passes plain HTTP to the app, so force
-        // every generated link (CSS, JS, forms, icons) to use https in production.
-        if ($this->app->environment('production')) {
-            URL::forceScheme('https');
-        }
-
         // public/storage is git-ignored, so a fresh deploy (Railway, etc.) has no link and
         // uploaded property images would 404. Create it once if it is missing.
         if ($this->app->environment('production') && ! file_exists(public_path('storage'))) {

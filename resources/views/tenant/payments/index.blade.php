@@ -53,10 +53,7 @@
                                         <td class="px-4 py-3 text-slate-600">{{ $payment->due_date->format('M j, Y') }}</td>
                                         <td class="px-4 py-3">@include('partials.payment-status-badge', ['payment' => $payment])</td>
                                         <td class="px-4 py-3 text-right">
-                                            <a href="{{ route('tenant.payments.show', $payment) }}"
-                                               class="{{ $payment->canBeSubmittedByTenant()
-                                                    ? 'inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400'
-                                                    : 'inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft' }}">
+                                            <a href="{{ route('tenant.payments.show', $payment) }}" class="text-sm text-blue-600 hover:underline">
                                                 {{ $payment->canBeSubmittedByTenant() ? 'Pay now' : 'View' }}
                                             </a>
                                         </td>

@@ -8,7 +8,6 @@
     <form method="GET" class="mb-4">
         <select name="status" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm">
             <option value="">All statuses</option>
-            <option value="open" @selected(request('status') === 'open')>Open (submitted + in progress)</option>
             @foreach (['submitted', 'in_progress', 'resolved', 'closed'] as $status)
                 <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->replace('_',' ')->title() }}</option>
             @endforeach

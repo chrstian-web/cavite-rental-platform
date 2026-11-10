@@ -8,7 +8,7 @@
             <h1 class="text-xl font-semibold text-slate-900">Manage users</h1>
             <p class="text-sm text-slate-500 mt-1">Reset a user’s password or remove accounts that are no longer members.</p>
         </div>
-        <a href="{{ route('admin.users.deleted') }}" class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft rt-soft-slate">Deleted users &rarr;</a>
+        <a href="{{ route('admin.users.deleted') }}" class="text-sm text-slate-600 hover:underline">Deleted users &rarr;</a>
     </div>
 
     <form method="GET" class="mb-4 flex gap-2">

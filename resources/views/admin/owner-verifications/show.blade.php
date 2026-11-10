@@ -29,9 +29,8 @@
                                     <p class="text-xs text-slate-400">Expires {{ $doc->expiration_date->format('M j, Y') }}</p>
                                 @endif
                             </div>
-                            {{-- x-data gives this button its own Alpine scope; it sits outside the viewer's, so @click would otherwise never bind. --}}
-                            <button type="button" x-data @click="$dispatch('open-docs', { id: 'owner-docs', index: {{ $loop->index }} })"
-                                    class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">View</button>
+                            <button type="button" @click="$dispatch('open-docs', { id: 'owner-docs', index: {{ $loop->index }} })"
+                                    class="shrink-0 text-blue-600 hover:underline text-xs">View</button>
                         </div>
                     @endforeach
                 </div>

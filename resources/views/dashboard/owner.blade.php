@@ -32,20 +32,23 @@
 
     @include('partials.onboarding-checklist')
 
+    @php
+        $dashboardStats = [
+            ['label' => 'Properties', 'value' => $totalProperties, 'href' => route('owner.properties.index')],
+            ['label' => 'Total Units', 'value' => $totalUnits, 'href' => route('owner.properties.index')],
+            ['label' => 'Available Units', 'value' => $availableUnits, 'href' => route('owner.properties.index')],
+            ['label' => 'Occupied Units', 'value' => $occupiedUnits, 'href' => route('owner.properties.index')],
+            ['label' => 'Pending Applications', 'value' => $pendingApplications, 'href' => route('owner.applications.index', ['status' => 'pending'])],
+            ['label' => 'Active Tenants', 'value' => $activeTenants, 'href' => route('owner.contracts.index')],
+            ['label' => 'Pending Maintenance', 'value' => $pendingMaintenance, 'href' => route('owner.maintenance.index')],
+            ['label' => 'Total Property Views', 'value' => $totalViews, 'href' => route('owner.properties.index')],
+        ];
+    @endphp
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" data-tour="owner-stats">
-        @foreach ([
-            ['Properties', $totalProperties, route('owner.properties.index')],
-            ['Total Units', $totalUnits, $unitsUrl],
-            ['Available Units', $availableUnits, $unitsUrl],
-            ['Occupied Units', $occupiedUnits, $unitsUrl],
-            ['Pending Applications', $pendingApplications, route('owner.applications.index', ['status' => 'pending'])],
-            ['Active Tenants', $activeTenants, route('owner.contracts.index', ['status' => 'active'])],
-            ['Pending Maintenance', $pendingMaintenance, route('owner.maintenance.index', ['status' => 'open'])],
-            ['Total Property Views', $totalViews, route('owner.properties.index')],
-        ] as [$label, $value, $url])
-            <a href="{{ $url }}" class="surface-card block p-5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400" aria-label="{{ $label }}: {{ $value }}. View details">
-                <p class="text-xs font-semibold text-slate-500">{{ $label }}</p>
-                <p class="text-2xl font-extrabold text-slate-950 mt-1">{{ $value }}</p>
+        @foreach ($dashboardStats as $stat)
+            <a href="{{ $stat['href'] }}" class="surface-card block p-5 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 active:translate-y-0">
+                <p class="text-xs font-semibold text-slate-500">{{ $stat['label'] }}</p>
+                <p class="text-2xl font-extrabold text-slate-950 mt-1">{{ $stat['value'] }}</p>
             </a>
         @endforeach
     </div>

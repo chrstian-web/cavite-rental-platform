@@ -25,7 +25,7 @@ class RentalContractController extends Controller
     {
         $this->authorize('view', $contract);
 
-        $contract->load(['property', 'rentalSpace', 'payments', 'review', 'application.reservationFeePayment']);
+        $contract->load(['property', 'rentalSpace', 'payments', 'review']);
 
         return view('tenant.contracts.show', compact('contract'));
     }

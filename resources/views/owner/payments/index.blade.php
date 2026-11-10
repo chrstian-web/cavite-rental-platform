@@ -59,7 +59,7 @@
                             <td class="px-4 py-3 text-slate-600">{{ $payment->submitted_at?->format('M j, Y') ?? '—' }}</td>
                             <td class="px-4 py-3">@include('partials.payment-status-badge', ['payment' => $payment])</td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('owner.payments.show', $payment) }}" class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">
+                                <a href="{{ route('owner.payments.show', $payment) }}" class="text-sm text-blue-600 hover:underline">
                                     {{ $payment->canBeReviewed() ? 'Review' : 'View' }}
                                 </a>
                             </td>

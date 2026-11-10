@@ -29,8 +29,7 @@ class RentalApplicationController extends Controller
             })
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
-            ->paginate(10)
-            ->withQueryString();
+            ->paginate(10);
 
         return view('owner.applications.index', compact('applications'));
     }

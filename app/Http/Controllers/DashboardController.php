@@ -11,6 +11,7 @@ use App\Models\RentalApplication;
 use App\Models\RentalContract;
 use App\Models\RentalSpace;
 use App\Models\User;
+use App\Services\AdminActivityService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -23,13 +24,13 @@ class DashboardController extends Controller
         $user = $request->user();
 
         return match ($user->role->slug) {
-            'super_admin' => view('dashboard.admin', $this->adminStats()),
+            'super_admin' => view('dashboard.admin', $this->adminStats($user)),
             'owner', 'manager' => view('dashboard.owner', $this->ownerStats($user)),
             default => view('dashboard.tenant', $this->tenantStats($user)),
         };
     }
 
-    protected function adminStats(): array
+    protected function adminStats(User $admin): array
     {
         $roleCount = fn (string $slug) => User::whereHas('role', fn ($q) => $q->where('slug', $slug))->count();
 
@@ -51,7 +52,7 @@ class DashboardController extends Controller
             'deletedUsers' => User::onlyTrashed()->count(),
 
             'owners' => $this->ownerSummaries(),
-            'recentActivity' => $this->recentActivity(),
+            'recentActivity' => app(AdminActivityService::class)->recent($admin),
         ];
     }
 
@@ -88,40 +89,6 @@ class DashboardController extends Controller
             $owner->active_tenants_count = $tenants[$owner->id] ?? 0;
             $owner->latest_verification = $owner->ownerVerifications->first();
         });
-    }
-
-    /**
-     * Latest platform events for the admin feed: new sign-ups, property
-     * submissions and owner verification submissions, newest first.
-     */
-    protected function recentActivity(int $limit = 8)
-    {
-        $signups = User::with('role')->latest()->take($limit)->get()
-            ->filter(fn ($u) => $u->role?->slug !== 'super_admin')
-            ->map(fn ($u) => [
-                'at' => $u->created_at,
-                'text' => trim($u->first_name.' '.$u->last_name).' registered as '.str($u->role?->slug ?? 'user')->replace('_', ' ')->lower(),
-                'url' => route('admin.users.index', ['search' => $u->email]),
-            ]);
-
-        $properties = Property::with('owner')->latest()->take($limit)->get()
-            ->map(fn ($p) => [
-                'at' => $p->created_at,
-                'text' => '"'.$p->name.'" submitted by '.trim(($p->owner->first_name ?? '').' '.($p->owner->last_name ?? '')),
-                'url' => route('admin.properties.index'),
-            ]);
-
-        $verifications = OwnerVerification::active()->with('user')->whereNotNull('submitted_at')->latest('submitted_at')->take($limit)->get()
-            ->map(fn ($v) => [
-                'at' => $v->submitted_at,
-                'text' => trim(($v->user->first_name ?? '').' '.($v->user->last_name ?? '')).' submitted owner verification',
-                'url' => route('admin.owner-verifications.show', $v),
-            ]);
-
-        return $signups->concat($properties)->concat($verifications)
-            ->sortByDesc('at')
-            ->take($limit)
-            ->values();
     }
 
     protected function ownerStats(User $user): array

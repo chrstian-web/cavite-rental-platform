@@ -61,12 +61,11 @@
             @endif
         </div>
 
-        @php($paymentHistory = $contract->paymentHistory())
-        @if ($paymentHistory->isNotEmpty())
+        @if ($contract->payments->isNotEmpty())
             <div class="mt-4 pt-4 border-t border-slate-100">
                 <p class="text-sm font-medium text-slate-700 mb-2">Payment history</p>
                 <ul class="text-sm space-y-1">
-                    @foreach ($paymentHistory as $payment)
+                    @foreach ($contract->payments as $payment)
                         <li class="flex items-center justify-between">
                             <a href="{{ route('tenant.payments.show', $payment) }}" class="hover:underline">
                                 {{ $payment->typeLabel() }} — ₱{{ number_format($payment->amount, 2) }} — due {{ $payment->due_date->format('M j, Y') }}

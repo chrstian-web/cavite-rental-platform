@@ -115,12 +115,22 @@
 
         {{-- Recent activity --}}
         <div class="bg-white border border-slate-200 rounded-xl p-5">
-            <p class="text-sm font-medium text-slate-700 mb-3">Recent Activity</p>
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <p class="text-sm font-medium text-slate-700">Recent Activity</p>
+                <a href="{{ route('admin.activity.archive.index') }}" class="text-xs font-semibold text-blue-600 hover:underline">View archive</a>
+            </div>
             <ul class="space-y-3">
                 @forelse ($recentActivity as $item)
-                    <li>
-                        <a href="{{ $item['url'] }}" class="block text-sm text-slate-700 hover:underline">{{ $item['text'] }}</a>
-                        <p class="text-xs text-slate-400">{{ $item['at']->diffForHumans() }}</p>
+                    <li class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <a href="{{ $item['url'] }}" class="block text-sm text-slate-700 hover:underline">{{ $item['text'] }}</a>
+                            <p class="text-xs text-slate-400">{{ $item['at']->diffForHumans() }}</p>
+                        </div>
+                        <form method="POST" action="{{ route('admin.activity.archive', [$item['archive_type'], $item['archive_id']]) }}" class="shrink-0">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Archive</button>
+                        </form>
                     </li>
                 @empty
                     <li class="text-sm text-slate-400">No activity yet.</li>
