@@ -17,6 +17,7 @@ trait FiltersAndSortsProperties
     {
         return Property::query()
             ->available()
+            ->visibleToTenants()
             ->where('verification_status', 'verified');
     }
 
@@ -53,7 +54,8 @@ trait FiltersAndSortsProperties
             'price_high' => $query->orderByRaw('COALESCE(max_monthly_rent, 0) desc'),
             'most_viewed' => $query->orderByDesc('views_count'),
             'highest_rated' => $query->orderByRaw('reviews_avg_rating IS NULL, reviews_avg_rating desc'),
-            default => $query->latest(),
+            // Default order: boosted (paid-plan) listings first, then newest.
+            default => $query->boostedFirst()->latest(),
         };
     }
 

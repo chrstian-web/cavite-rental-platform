@@ -46,6 +46,11 @@ class User extends Authenticatable
         return $this->hasMany(Property::class, 'owner_id');
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     public function managedProperties(): BelongsToMany
     {
         return $this->belongsToMany(Property::class, 'property_manager_assignments', 'manager_id', 'property_id');

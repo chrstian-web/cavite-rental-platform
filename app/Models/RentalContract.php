@@ -57,6 +57,21 @@ class RentalContract extends Model
     }
 
     /**
+     * Everything the tenant has paid for this rental, reservation fee first.
+     * The reservation fee belongs to the application, so it is added here for display only.
+     * Down-payment and activation logic keep using payments() and are not affected.
+     */
+    public function paymentHistory(): \Illuminate\Support\Collection
+    {
+        $reservationFee = $this->application?->reservationFeePayment;
+
+        return collect([$reservationFee])
+            ->filter()
+            ->concat($this->payments)
+            ->values();
+    }
+
+    /**
      * Amounts that must be paid up front, keyed by payment type. A zero
      * amount means that part is not required for this contract.
      *

@@ -34,6 +34,9 @@
                 </div>
             @endif
             <span class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/45 to-transparent pointer-events-none"></span>
+            @if ($property->is_boosted ?? false)
+                <span class="absolute bottom-3 left-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-400 text-amber-950 shadow-sm">Featured</span>
+            @endif
             <span class="absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-white/95 backdrop-blur-sm text-rose-700 border border-rose-100">
                 {{ str($property->property_type)->replace('_', ' ')->title() }}
             </span>

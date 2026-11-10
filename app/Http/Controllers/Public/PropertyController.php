@@ -27,6 +27,7 @@ class PropertyController extends Controller
         $properties = $this->applyPropertySort(
             $this->applyPropertyFilters(
                 $this->baseVerifiedAvailableQuery()
+                    ->withBoostFlag()
                     ->with(['images' => fn ($q) => $q->where('is_cover', true), 'location'])
                     ->withCount('rentalSpaces')
                     ->withAvg('reviews', 'rating'),
@@ -89,6 +90,12 @@ class PropertyController extends Controller
             ->withAvg('reviews', 'rating')
             ->where('slug', $slug)
             ->firstOrFail();
+
+        // Over the owner's plan limit: hidden from tenants, still visible to the owner and admins.
+        abort_if(
+            $property->subscription_hidden && ! (auth()->check() && auth()->user()->can('update', $property)),
+            404
+        );
 
         $property->increment('views_count');
 
