@@ -46,6 +46,25 @@ class DocumentViewerItems
         })->values()->all();
     }
 
+    public static function fromPayment($payment): array
+    {
+        if (blank($payment->proof_path)) {
+            return [];
+        }
+
+        // Use the original file name when we have it, otherwise the stored path's extension.
+        $filename = $payment->proof_original_filename ?: $payment->proof_path;
+
+        return [[
+            'label' => 'Proof of payment',
+            'name' => $payment->proof_original_filename ?: basename($payment->proof_path),
+            'meta' => $payment->reference_number ? 'Ref # '.$payment->reference_number : null,
+            'kind' => self::kind($filename, null),
+            'src' => route('payments.proof.view', $payment),
+            'download' => route('payments.proof.download', $payment),
+        ]];
+    }
+
     private static function kind(?string $filename, ?string $mime): string
     {
         $ext = strtolower(pathinfo((string) $filename, PATHINFO_EXTENSION));
