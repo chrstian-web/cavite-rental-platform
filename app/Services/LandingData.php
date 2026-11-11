@@ -81,7 +81,7 @@ class LandingData
             return self::empty();
         }
 
-        $base = fn () => Property::query()->available()->where('verification_status', 'verified');
+        $base = fn () => Property::query()->available()->visibleToTenants()->where('verification_status', 'verified');
 
         $total = $base()->count();
         if ($total === 0) {

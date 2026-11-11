@@ -31,6 +31,9 @@
                 <div class="hidden md:flex items-center gap-6">
                     @if (in_array(auth()->user()->role->slug, ['owner', 'manager']))
                         @include('partials.nav-link', ['route' => 'owner.properties.index', 'label' => 'My Properties', 'notifyTypes' => 'property_verification'])
+                        @if (auth()->user()->isOwner())
+                            @include('partials.nav-link', ['route' => 'owner.subscription.index', 'label' => 'Plans', 'notifyTypes' => 'none'])
+                        @endif
                         @include('partials.nav-dropdown', ['label' => 'Rentals', 'links' => [
                             ['route' => 'owner.applications.index', 'label' => 'Applications', 'notifyTypes' => 'new_rental_application'],
                             ['route' => 'owner.viewings.index', 'label' => 'Viewing Requests', 'notifyTypes' => 'new_viewing_request'],
@@ -115,6 +118,10 @@
         @yield('content')
     </main>
 
+    @if (auth()->check() && auth()->user()->isOwner() && ! request()->routeIs('owner.subscription.*')
+        && ! app(\App\Services\SubscriptionService::class)->hasChosen(auth()->user()))
+        @include('partials.subscription-popup')
+    @endif
     @if (auth()->check() && ! auth()->user()->isSuperAdmin())
         @include('partials.onboarding-guide')
     @endif

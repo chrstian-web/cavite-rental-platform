@@ -42,6 +42,7 @@ class PropertyController extends ApiController
             ->withCount('reviews')
             ->withAvg('reviews', 'rating')
             ->where('slug', $slug)
+            ->visibleToTenants()
             ->where('verification_status', 'verified')
             ->firstOrFail();
 

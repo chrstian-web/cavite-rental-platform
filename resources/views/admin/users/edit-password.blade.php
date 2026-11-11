@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="max-w-xl">
-        <a href="{{ route('admin.users.index') }}" class="text-sm text-blue-600 hover:underline">&larr; Back to users</a>
+        <a href="{{ route('admin.users.index') }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">&larr; Back to users</a>
 
         <div class="mt-4 bg-white border border-slate-200 rounded-xl p-6">
             <h1 class="text-xl font-semibold text-slate-900">Reset user password</h1>
@@ -34,7 +34,7 @@
                 </div>
 
                 <div class="flex items-center justify-end gap-3">
-                    <a href="{{ route('admin.users.index') }}" class="text-sm text-slate-600 hover:underline">Cancel</a>
+                    <a href="{{ route('admin.users.index') }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Cancel</a>
                     <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
                         Update password
                     </button>

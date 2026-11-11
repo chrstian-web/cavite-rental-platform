@@ -33,6 +33,11 @@ class PropertyService
 
             $this->storeImages($property, $images);
 
+            // A new listing past the owner's plan limit is saved but not shown to tenants.
+            if ($owner = User::find($ownerId)) {
+                app(SubscriptionService::class)->syncVisibility($owner);
+            }
+
             // Every new listing starts unverified — let admins know one is waiting.
             User::whereHas('role', fn ($q) => $q->where('slug', 'super_admin'))
                 ->get()
@@ -69,6 +74,11 @@ class PropertyService
             }
 
             $property->delete(); // soft delete
+
+            // A freed slot lets the owner's next hidden listing show again.
+            if ($owner = User::find($property->owner_id)) {
+                app(SubscriptionService::class)->syncVisibility($owner);
+            }
         });
     }
 
