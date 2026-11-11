@@ -96,7 +96,7 @@ class OnlinePaymentTest extends TestCase
             ->assertOk()
             ->assertDontSee('Demo checkout — no real money will be transferred.')
             ->assertSee('GCash')
-            ->assertSee('Bank transfer');
+            ->assertDontSee('Bank transfer');
         $checkoutUrl = (string) $response->headers->get('Location');
         $this->actingAs($tenant)
             ->post(route('tenant.payments.pay-online', $payment))
@@ -181,11 +181,11 @@ class OnlinePaymentTest extends TestCase
         $this->assertSame(0, $owner->notifications()->count());
 
         $this->actingAs($tenant)
-            ->post(route('fake-checkout.pay', $payment->fresh()->gateway_checkout_id), ['payment_method' => 'bank_transfer'])
+            ->post(route('fake-checkout.pay', $payment->fresh()->gateway_checkout_id), ['payment_method' => 'gcash'])
             ->assertRedirect(route('tenant.applications.show', $application));
 
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
-        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'payment_method' => 'bank_transfer']);
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'payment_method' => 'gcash']);
         $ownerNotice = $owner->notifications()->where('data->type', 'online_payment_received')->firstOrFail();
         $this->assertSame($application->id, (int) $ownerNotice->data['application_id']);
 

@@ -17,7 +17,7 @@ class StorePaymentRequest extends FormRequest
             'amount' => ['required', 'numeric', 'min:0'],
             'due_date' => ['required', 'date'],
             'payment_date' => ['nullable', 'date'],
-            'payment_method' => ['nullable', 'in:cash,gcash,bank_transfer,other'],
+            'payment_method' => ['nullable', 'in:gcash'],
             'reference_number' => ['nullable', 'string', 'max:100'],
             'status' => ['required', 'in:pending,paid,overdue,failed'],
             'notes' => ['nullable', 'string', 'max:1000'],

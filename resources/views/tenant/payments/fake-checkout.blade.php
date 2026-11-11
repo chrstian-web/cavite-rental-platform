@@ -14,12 +14,8 @@
             <fieldset>
                 <legend class="mb-2 text-sm font-medium text-slate-700">Choose a payment method</legend>
                 <label class="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
-                    <input type="radio" name="payment_method" value="gcash" required @checked(old('payment_method', 'gcash') === 'gcash')>
+                    <input type="radio" name="payment_method" value="gcash" required checked>
                     <span>GCash</span>
-                </label>
-                <label class="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
-                    <input type="radio" name="payment_method" value="bank_transfer" required @checked(old('payment_method') === 'bank_transfer')>
-                    <span>Bank transfer</span>
                 </label>
                 @error('payment_method') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </fieldset>

@@ -144,11 +144,7 @@
                         <div>
                             <label class="block text-xs font-medium text-slate-500 mb-1">Payment method</label>
                             <select name="payment_method" required class="w-full rounded-lg border-slate-300">
-                                <option value="">Select method</option>
-                                <option value="cash" @selected(old('payment_method') === 'cash')>Cash</option>
-                                <option value="gcash" @selected(old('payment_method') === 'gcash')>GCash</option>
-                                <option value="bank_transfer" @selected(old('payment_method') === 'bank_transfer')>Bank Transfer</option>
-                                <option value="other" @selected(old('payment_method') === 'other')>Other</option>
+                                <option value="gcash" selected>GCash</option>
                             </select>
                         </div>
 

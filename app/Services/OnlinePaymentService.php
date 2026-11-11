@@ -186,8 +186,8 @@ class OnlinePaymentService
                 'payment_source' => 'online',
                 'gateway' => $gateway,
                 'gateway_payment_id' => $gatewayPaymentId,
-                // The rest of the app only knows these methods; the real one is kept in metadata.
-                'payment_method' => in_array($method, ['gcash', 'bank_transfer'], true) ? $method : 'other',
+                // GCash is the only supported payment method.
+                'payment_method' => 'gcash',
                 'reference_number' => $locked->gateway_reference ?: $locked->reference_number,
                 'payment_date' => today(),
                 'paid_at' => now(),
