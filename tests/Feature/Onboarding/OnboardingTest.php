@@ -150,13 +150,13 @@ class OnboardingTest extends TestCase
             ->assertSee('Click the empty heart');
     }
 
-    public function test_guide_panel_is_available_on_the_public_home_pages_for_signed_in_renters(): void
+    public function test_guide_panel_is_hidden_on_property_search_for_signed_in_renters(): void
     {
         $tenant = User::factory()->tenant()->create();
 
         $this->actingAs($tenant)->get('/properties')
             ->assertOk()
-            ->assertSee('id="ob-panel"', false);
+            ->assertDontSee('id="ob-panel"', false);
     }
 
     public function test_guests_do_not_get_the_guide_panel(): void

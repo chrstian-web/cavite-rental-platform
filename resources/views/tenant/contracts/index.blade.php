@@ -35,7 +35,7 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('tenant.contracts.show', $contract) }}" class="text-blue-600 hover:underline">View</a>
+                                <a href="{{ route('tenant.contracts.show', $contract) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">View</a>
                             </td>
                         </tr>
                     @endforeach

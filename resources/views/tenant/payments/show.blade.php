@@ -43,12 +43,6 @@
                         <a href="{{ route('tenant.payments.receipt', $payment) }}" class="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rt-soft">Download receipt (PDF)</a>
                     </div>
                 @endif
-
-                @if ($payment->status === 'paid')
-                    <div class="mt-4 pt-4 border-t border-slate-100">
-                        <a href="{{ route('tenant.payments.receipt', $payment) }}" class="text-sm text-blue-600 hover:underline">Download receipt (PDF)</a>
-                    </div>
-                @endif
             </div>
 
             @if (in_array($payment->status, ['failed', 'pending']) && $payment->review_reason)
@@ -75,46 +69,13 @@
                 </div>
             @endif
 
-            {{-- Paid online: collect reference number + screenshot --}}
-            @if ($payment->isOnline() && $payment->status === 'paid')
-                <div id="payment-details" class="bg-white border border-slate-200 rounded-xl p-6 scroll-mt-24">
-                    @if ($payment->proof_path)
-                        <h2 class="text-sm font-semibold text-slate-700 mb-1">Payment details saved &#10003;</h2>
-                        <p class="text-xs text-slate-500 mb-4">Your reference number and screenshot are on record. You can replace them below if you made a mistake.</p>
-                    @else
-                        <h2 class="text-sm font-semibold text-slate-700 mb-1">Payment received — add your details</h2>
-                        <p class="text-xs text-slate-500 mb-4">Enter the reference number from your payment and attach a screenshot of it, so the owner has your proof on record.</p>
-                    @endif
-
-                    @include('partials.validation-errors')
-
-                    <form method="POST" action="{{ route('tenant.payments.details', $payment) }}" enctype="multipart/form-data" class="space-y-4">
-                        @csrf
-                        <div>
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Reference number <span class="text-rose-600">*</span></label>
-                            <input type="text" name="reference_number" required maxlength="100"
-                                   value="{{ old('reference_number', $payment->proof_path ? $payment->reference_number : '') }}"
-                                   placeholder="e.g. GCash transaction ID" class="w-full rounded-lg border-slate-300">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-500 mb-1">Screenshot of payment <span class="text-rose-600">*</span></label>
-                            <input type="file" name="proof" required accept=".jpg,.jpeg,.png,.pdf" class="w-full text-sm">
-                            <p class="text-xs text-slate-400 mt-1">JPG, PNG, or PDF — up to 5MB.</p>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 text-sm font-medium min-h-[44px]">
-                            {{ $payment->proof_path ? 'Replace details' : 'Save reference number & screenshot' }}
-                        </button>
-                    </form>
-                </div>
-            @endif
-
             @if ($payment->canBeSubmittedByTenant())
                 <div class="bg-white border border-slate-200 rounded-xl p-6">
                     <h2 class="text-sm font-semibold text-slate-700 mb-1">Pay online</h2>
                     @include('partials.paymongo-payment-methods')
                     @if ((config('services.payment_gateway') === 'fake' && app()->environment(['local', 'testing'])) || (config('services.payment_gateway') === 'paymongo' && filled(config('services.paymongo.secret_key')) && filled(config('services.paymongo.webhook_secret')) && count(config('services.paymongo.payment_methods', [])) > 0))
                         @if (config('services.payment_gateway') === 'paymongo')
-                            <p class="text-xs text-slate-500 mb-4">The provider confirms the payment. After checkout, return here to add your reference number and screenshot.</p>
+                            <p class="text-xs text-slate-500 mb-4">The provider confirms the payment.</p>
                         @endif
                         <form method="POST" action="{{ route('tenant.payments.pay-online', $payment) }}">
                             @csrf

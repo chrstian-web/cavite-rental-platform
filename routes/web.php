@@ -22,6 +22,7 @@ use App\Http\Controllers\Owner\RentalApplicationController as OwnerRentalApplica
 use App\Http\Controllers\Owner\RentalContractController as OwnerRentalContractController;
 use App\Http\Controllers\Owner\RentalSpaceController;
 use App\Http\Controllers\Owner\RentalSpaceImageController;
+use App\Http\Controllers\Owner\SubscriptionController;
 use App\Http\Controllers\Owner\SceneHotspotController;
 use App\Http\Controllers\Owner\ViewingRequestController as OwnerViewingRequestController;
 use App\Http\Controllers\Owner\VirtualTourController;
@@ -216,6 +217,12 @@ Route::middleware('auth')->group(function () {
         Route::get('verification', [OwnerVerificationController::class, 'show'])->name('verification.show');
         Route::post('verification', [OwnerVerificationController::class, 'store'])->name('verification.store');
 
+        // Subscription plans — also outside the 'owner.verified' gate so a brand-new owner
+        // can pick a plan right after registering.
+        Route::get('subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
+        Route::post('subscription', [SubscriptionController::class, 'store'])->name('subscription.store');
+        Route::get('subscription/{subscription}/demo', [SubscriptionController::class, 'demo'])->name('subscription.demo');
+        Route::post('subscription/{subscription}/demo', [SubscriptionController::class, 'demoConfirm'])->name('subscription.demo.confirm');
     });
 
     // Super Admin

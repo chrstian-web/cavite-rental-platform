@@ -29,6 +29,28 @@
 @section('content')
     <div class="mb-8"><p class="eyebrow text-rose-600 mb-2">Renter dashboard</p><h1 class="text-3xl font-extrabold tracking-tight text-slate-950">Welcome, {{ auth()->user()->first_name }}</h1><p class="text-sm text-slate-500 mt-1">Stay on top of your rental journey in Cavite.</p></div>
 
+    @include('partials.onboarding-checklist')
+
+    @if ($showNearbyPrompt ?? false)
+        <div id="nearby-location-prompt" role="dialog" aria-modal="true" aria-labelledby="nearby-prompt-title"
+             style="position:fixed;inset:0;z-index:9997;background:rgba(2,6,23,.55);display:flex;align-items:center;justify-content:center;padding:16px">
+            <div class="surface-card p-6 sm:p-8 w-full" style="max-width:440px">
+                <h2 id="nearby-prompt-title" class="text-xl font-extrabold text-slate-950">Share location &amp; find nearby homes</h2>
+                <p class="text-sm text-slate-500 mt-2">Tell us your city, barangay, or street and we will show rentals close to you.</p>
+                <form method="POST" action="{{ route('properties.nearby') }}" class="mt-4 space-y-3">
+                    @csrf
+                    <input type="text" name="location" required minlength="2" maxlength="120" placeholder="City, barangay, or street"
+                           class="w-full rounded-lg border border-slate-300 text-sm">
+                    <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+                        <button type="button" class="rt-soft inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-semibold"
+                                onclick="document.getElementById('nearby-location-prompt').remove()">Not now</button>
+                        <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">Find nearby homes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
         @if ($availableProperties->isNotEmpty())
             <section class="lg:col-span-2 min-w-0">
@@ -110,6 +132,10 @@
     <p class="text-sm text-slate-400">No active rental yet.</p>
 @endif
             </div>
+
+            @if ($activeContract && $rentSchedule)
+                @include('partials.rent-schedule', ['contract' => $activeContract, 'schedule' => $rentSchedule])
+            @endif
 
             <div class="surface-card p-6"><div class="flex justify-between items-center mb-3"><p class="eyebrow">Recent applications</p><a href="{{ route('tenant.applications.index') }}" class="text-xs font-bold text-rose-600">View all</a></div>
                 @forelse ($recentApplications as $application)

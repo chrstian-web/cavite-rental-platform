@@ -114,6 +114,14 @@ class OnlinePaymentService
             ? Payment::where('gateway', 'paymongo')->where('gateway_checkout_id', $checkoutId)->first()
             : null;
 
+        // Owner plan checkouts use the same gateway but are not rental payments.
+        if (! $payment && $checkoutId && app(SubscriptionService::class)->handlePaidCheckout(
+            $checkoutId,
+            data_get($session, 'attributes.payments.0.attributes.amount')
+        )) {
+            return;
+        }
+
         if (! $payment) {
             Log::warning('PayMongo webhook for an unknown checkout.', ['checkout_id' => $checkoutId, 'event_id' => $eventId]);
 

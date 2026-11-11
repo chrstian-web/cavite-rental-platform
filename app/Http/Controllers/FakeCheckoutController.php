@@ -90,8 +90,8 @@ class FakeCheckoutController extends Controller
         }
 
         return redirect()
-            ->to(route('tenant.payments.show', $payment).'#payment-details')
-            ->with('status', 'Payment recorded using '.str($data['payment_method'])->replace('_', ' ')->title().'. Add your reference number and screenshot below.');
+            ->route('tenant.payments.show', $payment)
+            ->with('status', 'Payment recorded using '.str($data['payment_method'])->replace('_', ' ')->title().'.');
     }
 
     public function cancel(string $checkout): RedirectResponse

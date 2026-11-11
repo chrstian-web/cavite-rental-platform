@@ -11,6 +11,7 @@ use App\Models\RentalApplication;
 use App\Models\RentalContract;
 use App\Models\RentalSpace;
 use App\Services\AdminActivityService;
+use App\Services\RentScheduleService;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -184,8 +185,16 @@ class DashboardController extends Controller
             ->sortByDesc('count')
             ->values();
 
+        // One-time "share your location" prompt: shown the first time a renter opens the dashboard.
+        $showNearbyPrompt = $user->nearby_prompted_at === null;
+        if ($showNearbyPrompt) {
+            $user->forceFill(['nearby_prompted_at' => now()])->save();
+        }
+
         return [
+            'showNearbyPrompt' => $showNearbyPrompt,
             'activeContract' => $activeContract,
+            'rentSchedule' => $activeContract ? app(RentScheduleService::class)->forContract($activeContract) : null,
             'recentApplications' => RentalApplication::where('user_id', $user->id)->with('property')->latest()->take(3)->get(),
             'upcomingPayment' => Payment::where('user_id', $user->id)->where('status', 'pending')->orderBy('due_date')->first(),
             'upcomingViewings' => $user->viewingRequests()->whereIn('status', ['pending', 'confirmed'])->with('property')->orderBy('preferred_date')->take(3)->get(),

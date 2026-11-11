@@ -119,7 +119,7 @@ class OnlinePaymentTest extends TestCase
 
         $this->actingAs($tenant)
             ->post(route('fake-checkout.pay', $payment->gateway_checkout_id), ['payment_method' => 'gcash'])
-            ->assertRedirect(route('tenant.payments.show', $payment).'#payment-details');
+            ->assertRedirect(route('tenant.payments.show', $payment));
 
         $payment->refresh();
         $this->assertSame('paid', $payment->status);
