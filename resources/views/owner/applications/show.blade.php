@@ -84,7 +84,7 @@
                     <div>
                         <label class="block text-xs text-slate-500 mb-1">Reservation terms and conditions (required when approving)</label>
                         <textarea name="reservation_terms" rows="5" maxlength="10000" class="w-full rounded-lg border-slate-300 text-sm"
-                                  placeholder="Write the reservation fee terms the renter must accept before paying.">{{ old('reservation_terms') }}</textarea>
+                                  placeholder="Write the reservation fee terms the renter must accept before paying.">{{ old('reservation_terms', 'Reservation Policy: Please be advised that if the renter decides not to proceed with the rental, the reservation fee paid will be non-refundable.') }}</textarea>
                         @error('reservation_terms') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg py-2">

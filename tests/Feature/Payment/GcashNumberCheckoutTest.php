@@ -109,14 +109,15 @@ class GcashNumberCheckoutTest extends TestCase
         $this->assertSame('paid', $payment->fresh()->status);
     }
 
-    public function test_bank_transfer_is_still_recorded_straight_from_the_checkout_page(): void
+    public function test_bank_transfer_is_no_longer_accepted_at_checkout(): void
     {
         [$tenant, $payment] = $this->checkout();
 
         $this->actingAs($tenant)
-            ->post(route('fake-checkout.continue', $payment->gateway_checkout_id), ['payment_method' => 'bank_transfer']);
+            ->post(route('fake-checkout.continue', $payment->gateway_checkout_id), ['payment_method' => 'bank_transfer'])
+            ->assertSessionHasErrors('payment_method');
 
-        $this->assertSame('paid', $payment->fresh()->status);
+        $this->assertNotSame('paid', $payment->fresh()->status);
     }
 
     public function test_the_payment_page_offers_gcash_instead_of_the_paymongo_unavailable_warning(): void

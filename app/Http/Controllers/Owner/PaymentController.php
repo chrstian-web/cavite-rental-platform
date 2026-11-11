@@ -152,7 +152,7 @@ class PaymentController extends Controller
         $this->authorize('markReceived', $payment);
 
         $data = $request->validate([
-            'payment_method' => ['required', 'in:cash,gcash,bank_transfer,other'],
+            'payment_method' => ['required', 'in:gcash'],
             'reference_number' => ['nullable', 'string', 'max:100'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
         ]);

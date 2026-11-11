@@ -35,8 +35,8 @@ return [
         'secret_key' => env('PAYMONGO_SECRET_KEY', ''),
         'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET', ''),
         'payment_methods' => array_values(array_intersect(
-            ['card', 'gcash', 'qrph'],
-            array_filter(array_map('trim', explode(',', env('PAYMONGO_PAYMENT_METHODS', 'card,gcash,qrph'))))
+            ['gcash'],
+            array_filter(array_map('trim', explode(',', env('PAYMONGO_PAYMENT_METHODS', 'gcash'))))
         )),
     ],
 

@@ -16,7 +16,7 @@ class SubmitPaymentRequest extends FormRequest
     {
         return [
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_method' => ['required', 'in:cash,gcash,bank_transfer,other'],
+            'payment_method' => ['required', 'in:gcash'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
             'reference_number' => ['required', 'string', 'max:100'],
             'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],

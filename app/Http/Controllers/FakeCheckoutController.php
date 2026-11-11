@@ -28,21 +28,17 @@ class FakeCheckoutController extends Controller
     }
 
     /**
-     * "Complete payment" on the checkout page. GCash goes on to the GCash screen,
-     * where the owner's number is shown; other methods are recorded straight away.
+     * "Complete payment" on the checkout page. GCash is the only method, so it always
+     * goes on to the GCash screen, where the owner's number is shown.
      */
     public function continue(Request $request, string $checkout): RedirectResponse
     {
         $this->findPayment($checkout);
-        $data = $request->validate([
-            'payment_method' => ['required', 'in:gcash,bank_transfer'],
+        $request->validate([
+            'payment_method' => ['required', 'in:gcash'],
         ]);
 
-        if ($data['payment_method'] === 'gcash') {
-            return redirect()->route('fake-checkout.gcash', $checkout);
-        }
-
-        return $this->pay($request, $checkout);
+        return redirect()->route('fake-checkout.gcash', $checkout);
     }
 
     public function gcash(string $checkout): View|RedirectResponse
@@ -54,7 +50,7 @@ class FakeCheckoutController extends Controller
 
         if (blank($recipientNumber)) {
             return redirect()->route('fake-checkout.show', $checkout)
-                ->withErrors(['payment_method' => 'The owner has not added a GCash number yet. Please contact the owner or choose another method.']);
+                ->withErrors(['payment_method' => 'The owner has not added a GCash number yet. Please contact the owner.']);
         }
 
         return view('tenant.payments.fake-gcash', [
@@ -69,7 +65,7 @@ class FakeCheckoutController extends Controller
     {
         $payment = $this->findPayment($checkout);
         $data = $request->validate([
-            'payment_method' => ['required', 'in:gcash,bank_transfer'],
+            'payment_method' => ['required', 'in:gcash'],
             'amount' => ['nullable', 'numeric'],
         ]);
 
