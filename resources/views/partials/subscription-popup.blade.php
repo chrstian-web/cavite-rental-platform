@@ -1,8 +1,9 @@
 {{--
     Plan offer shown automatically to an owner who has not chosen a plan yet:
     new owners right after registering, and existing owners who already have properties.
-    "Maybe later" hides it for this browser session only; it returns on the next visit
-    until a plan (Free included) is chosen.
+    "Maybe later" hides it for the rest of this login session (stored server-side, so a
+    new tab won't bring it back); it returns after the owner logs out and back in, until a plan
+    (Free included) is chosen.
 --}}
 @php
     $subs = app(\App\Services\SubscriptionService::class);
@@ -12,10 +13,15 @@
     $spRecommended = $spCount > 0 ? $subs->recommend($spCount) : null;
 @endphp
 
-<div x-data="{ open: true, confirmFree: false, confirmedFree: false }"
-     x-init="try { if (sessionStorage.getItem('subscription-popup-dismissed')) open = false } catch (e) {}"
+<div x-data="{
+         open: true, confirmFree: false, confirmedFree: false,
+         dismiss() {
+             this.open = false;
+             try { fetch('{{ route('owner.subscription.dismiss') }}', { method: 'POST', keepalive: true, credentials: 'same-origin', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' } }); } catch (e) {}
+         }
+     }"
      x-show="open" x-cloak
-     x-on:keydown.escape.window="open = false"
+     x-on:keydown.escape.window="dismiss()"
      class="fixed inset-0 z-[9990] flex items-start justify-center overflow-y-auto p-4 sm:p-6"
      style="background:rgba(2,6,23,.6)" role="dialog" aria-modal="true" aria-labelledby="sub-popup-title">
     <div class="my-auto w-full max-w-5xl rounded-3xl bg-white p-5 shadow-2xl sm:p-8">
@@ -32,7 +38,7 @@
                     </p>
                 </div>
                 <button type="button" class="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
-                        x-on:click="open = false; try { sessionStorage.setItem('subscription-popup-dismissed', '1') } catch (e) {}">
+                        x-on:click="dismiss()">
                     Maybe later
                 </button>
             </div>
