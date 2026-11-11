@@ -100,10 +100,7 @@
                     <input type="date" name="payment_date" placeholder="Payment date (if paid)" class="w-full rounded-lg border-slate-300">
                     <select name="payment_method" class="w-full rounded-lg border-slate-300">
                         <option value="">Payment method</option>
-                        <option value="cash">Cash</option>
                         <option value="gcash">GCash</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="other">Other</option>
                     </select>
                     <input type="text" name="reference_number" placeholder="Reference # (optional)" class="w-full rounded-lg border-slate-300">
                     <select name="status" required class="w-full rounded-lg border-slate-300">
@@ -144,10 +141,7 @@
                                     <form method="POST" action="{{ route('owner.payments.received', $payment) }}" class="space-y-2 mt-2">
                                         @csrf @method('PATCH')
                                         <select name="payment_method" required class="w-full rounded-lg border-slate-300">
-                                            <option value="cash">Cash</option>
                                             <option value="gcash">GCash</option>
-                                            <option value="bank_transfer">Bank Transfer</option>
-                                            <option value="other">Other</option>
                                         </select>
                                         <input type="text" name="reference_number" placeholder="Reference # (optional)" class="w-full rounded-lg border-slate-300">
                                         <input type="date" name="payment_date" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required class="w-full rounded-lg border-slate-300">

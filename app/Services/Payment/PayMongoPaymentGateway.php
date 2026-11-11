@@ -28,7 +28,7 @@ class PayMongoPaymentGateway implements PaymentGatewayInterface
                 'currency' => $payment->currency ?: 'PHP',
                 'quantity' => 1,
             ]],
-            'payment_method_types' => config('services.paymongo.payment_methods', ['card', 'gcash', 'qrph']),
+            'payment_method_types' => config('services.paymongo.payment_methods', ['gcash']),
             'success_url' => $successUrl,
             'cancel_url' => $cancelUrl,
             'reference_number' => $reference,

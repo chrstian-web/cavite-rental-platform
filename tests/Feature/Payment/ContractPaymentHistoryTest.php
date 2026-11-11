@@ -101,7 +101,7 @@ class ContractPaymentHistoryTest extends TestCase
 
         $this->actingAs($owner)
             ->patch(route('owner.payments.received', $reservation), [
-                'payment_method' => 'cash',
+                'payment_method' => 'gcash',
                 'payment_date' => today()->toDateString(),
             ])
             ->assertForbidden();
