@@ -119,6 +119,7 @@
     </main>
 
     @if (auth()->check() && auth()->user()->isOwner() && ! request()->routeIs('owner.subscription.*')
+        && ! session('subscription_popup_dismissed')
         && ! app(\App\Services\SubscriptionService::class)->hasChosen(auth()->user()))
         @include('partials.subscription-popup')
     @endif

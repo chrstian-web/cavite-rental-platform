@@ -221,6 +221,7 @@ Route::middleware('auth')->group(function () {
         // can pick a plan right after registering.
         Route::get('subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
         Route::post('subscription', [SubscriptionController::class, 'store'])->name('subscription.store');
+        Route::post('subscription/dismiss', [SubscriptionController::class, 'dismissPopup'])->name('subscription.dismiss');
         Route::get('subscription/{subscription}/demo', [SubscriptionController::class, 'demo'])->name('subscription.demo');
         Route::post('subscription/{subscription}/demo', [SubscriptionController::class, 'demoConfirm'])->name('subscription.demo.confirm');
     });

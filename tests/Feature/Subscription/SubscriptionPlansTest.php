@@ -34,6 +34,23 @@ class SubscriptionPlansTest extends TestCase
         $this->assertSame('vip', $svc->recommend(25));
     }
 
+    public function test_maybe_later_hides_the_popup_until_the_next_login(): void
+    {
+        $owner = $this->ownerWithProperties(4);
+
+        $this->actingAs($owner)->get('/owner/properties')->assertOk()->assertSee('Choose your plan');
+
+        $this->actingAs($owner)->post('/owner/subscription/dismiss')->assertNoContent();
+
+        $this->actingAs($owner)->get('/owner/properties')->assertOk()->assertDontSee('Choose your plan');
+
+        // Logging out ends the session, so the popup is offered again after the next login.
+        $this->actingAs($owner)->post('/logout');
+        $this->flushSession();
+
+        $this->actingAs($owner)->get('/owner/properties')->assertOk()->assertSee('Choose your plan');
+    }
+
     public function test_popup_appears_until_an_owner_picks_a_plan(): void
     {
         $owner = $this->ownerWithProperties(4);

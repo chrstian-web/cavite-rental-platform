@@ -26,6 +26,14 @@ class SubscriptionController extends Controller
         ]);
     }
 
+    /** "Maybe later": hide the plan popup until the owner logs out and back in. */
+    public function dismissPopup(Request $request): \Illuminate\Http\Response
+    {
+        $request->session()->put('subscription_popup_dismissed', true);
+
+        return response()->noContent();
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
